@@ -1,0 +1,2588 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FUSION servis</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='72'%3E%3Ctext y='78'%3E%F0%9F%94%A7%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<!-- Firebase (bezplatný Google účet, nezávislé od Claude) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    color-scheme: light;
+    --bg: #eef0f1;
+    --surface: #ffffff;
+    --surface-2: #f4f6f7;
+    --text: #1b1f22;
+    --text-secondary: #545c62;
+    --text-muted: #8b949b;
+    --border: #dadfe2;
+    --accent: #a8501f;
+    --accent-ink: #ffffff;
+    --accent-soft: #f3e3d6;
+    --danger: #b23a2f;
+    --danger-soft: #f6dfd9;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --s-servis: #2a78d6;
+    --s-doprava: #eb6834;
+    --s-material: #1baf7a;
+    --c1: #a8501f;
+    --c2: #00806a;
+    --c3: #4c4a9e;
+    --c4: #8c6d1f;
+    --shadow: 0 1px 2px rgba(20,20,15,0.05), 0 6px 20px -8px rgba(20,20,15,0.12);
+    --shadow-lift: 0 2px 4px rgba(20,20,15,0.06), 0 10px 28px -10px rgba(20,20,15,0.18);
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --bg: #14171a;
+      --surface: #1d2124;
+      --surface-2: #22262a;
+      --text: #edeff0;
+      --text-secondary: #b4bcc2;
+      --text-muted: #7c858b;
+      --border: #2a2f33;
+      --accent: #c96b2e;
+      --accent-ink: #14171a;
+      --accent-soft: #3a2a1e;
+      --danger: #d9695a;
+      --danger-soft: #3a2422;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --s-servis: #3987e5;
+      --s-doprava: #d95926;
+      --s-material: #199e70;
+      --c1: #c96b2e;
+      --c2: #3fa893;
+      --c3: #8b87d6;
+      --c4: #b3901f;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 24px -10px rgba(0,0,0,0.5);
+      --shadow-lift: 0 2px 6px rgba(0,0,0,0.35), 0 12px 32px -10px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg: #14171a;
+    --surface: #1d2124;
+    --surface-2: #22262a;
+    --text: #edeff0;
+    --text-secondary: #b4bcc2;
+    --text-muted: #7c858b;
+    --border: #2a2f33;
+    --accent: #c96b2e;
+    --accent-ink: #14171a;
+    --accent-soft: #3a2a1e;
+    --danger: #d9695a;
+    --danger-soft: #3a2422;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --s-servis: #3987e5;
+    --s-doprava: #d95926;
+    --s-material: #199e70;
+    --c1: #c96b2e;
+    --c2: #3fa893;
+    --c3: #8b87d6;
+    --c4: #b3901f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 24px -10px rgba(0,0,0,0.5);
+    --shadow-lift: 0 2px 6px rgba(0,0,0,0.35), 0 12px 32px -10px rgba(0,0,0,0.6);
+  }
+
+  *{ box-sizing: border-box; }
+  [hidden]{ display:none !important; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{ font-family: var(--font-display); font-weight: 600; margin:0; text-wrap: balance; }
+  button{ font-family: var(--font-body); }
+  input, select{ font-family: var(--font-mono); }
+
+  .app{ flex:1; min-width:0; padding: 20px 16px 64px; }
+
+  /* ---------- sidebar (firmy) ---------- */
+  .shell{ display:flex; max-width:1440px; margin:0 auto; align-items:flex-start; }
+  .sidebar{
+    width:216px; flex-shrink:0; position:sticky; top:0; align-self:flex-start;
+    min-height:100vh; padding:20px 12px; border-right:1px solid var(--border);
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .sidebar-head{ font-family:var(--font-display); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); padding:0 8px 8px; }
+  .company-list{ display:flex; flex-direction:column; gap:2px; margin-bottom:10px; }
+  .company-item{
+    display:flex; align-items:center; border-radius:8px;
+    border-left:3px solid transparent; transition: background .12s, border-color .12s, color .12s;
+  }
+  .company-item:hover{ background: var(--surface-2); }
+  .company-item.active{ background: var(--accent-soft); border-left-color: var(--item-color, var(--accent)); }
+  .company-select{
+    flex:1; min-width:0; display:flex; align-items:center; gap:10px; padding:8px 6px 8px 10px; border:none;
+    background:none; cursor:pointer; text-align:left; font-family:var(--font-body); font-size:13.5px; color:var(--text-secondary);
+  }
+  .company-item.active .company-select{ color: var(--text); font-weight:600; }
+  .company-avatar{
+    width:26px; height:26px; border-radius:7px; background:var(--item-color, var(--accent)); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:600; font-size:12px; flex-shrink:0;
+  }
+  .company-item.c1{ --item-color: var(--c1); } .company-item.c2{ --item-color: var(--c2); }
+  .company-item.c3{ --item-color: var(--c3); } .company-item.c4{ --item-color: var(--c4); }
+  .company-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .company-edit-btn{
+    flex-shrink:0; width:24px; height:24px; margin-right:6px; border:none; background:none; border-radius:6px;
+    color: var(--text-muted); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    opacity:0; transition: opacity .12s, background .12s, color .12s;
+  }
+  .company-item:hover .company-edit-btn, .company-edit-btn:focus-visible{ opacity:1; }
+  .company-edit-btn:hover{ background: var(--surface); color: var(--accent); }
+  .company-edit-btn svg{ width:13px; height:13px; }
+  .company-reorder{ display:flex; flex-direction:column; flex-shrink:0; margin-right:2px; }
+  .company-move-btn{
+    width:17px; height:12px; border:none; background:none; padding:0; border-radius:4px;
+    color: var(--text-muted); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    opacity:0; transition: opacity .12s, background .12s, color .12s;
+  }
+  .company-item:hover .company-move-btn, .company-move-btn:focus-visible{ opacity:1; }
+  .company-move-btn:hover{ background: var(--surface); color: var(--accent); }
+  .company-move-btn.disabled{ visibility:hidden; pointer-events:none; }
+  .company-move-btn svg{ width:11px; height:11px; }
+  .company-rename-form{ display:flex; align-items:center; gap:4px; padding:5px 6px 5px 10px; width:100%; }
+  .company-rename-input{
+    flex:1; min-width:0; border:1px solid var(--accent); background:var(--surface); color:var(--text);
+    border-radius:6px; padding:5px 7px; font-size:13px; font-family:var(--font-body);
+  }
+  .company-rename-input:focus{ outline:none; }
+  .company-rename-ok, .company-rename-cancel{
+    flex-shrink:0; width:24px; height:24px; border:none; border-radius:6px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+  }
+  .company-rename-ok{ background: var(--accent); color: var(--accent-ink); }
+  .company-rename-cancel{ background: var(--surface-2); color: var(--text-secondary); }
+
+  .all-companies-btn{
+    display:flex; align-items:center; gap:10px; padding:8px 8px 8px 10px; margin-bottom:10px;
+    border-radius:8px; border:none; border-left:3px solid transparent; background:none; cursor:pointer;
+    text-align:left; font-family:var(--font-body); font-size:13.5px; color:var(--text-secondary); width:100%;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .all-companies-btn:hover{ background: var(--surface-2); }
+  .all-companies-btn.active{ background: var(--accent-soft); color: var(--text); font-weight:600; border-left-color: var(--accent); }
+  .all-avatar{
+    width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(135deg, var(--c1), var(--c2) 45%, var(--c3) 75%, var(--c4));
+  }
+  .all-avatar svg{ width:14px; height:14px; color:#fff; }
+  .sidebar-divider{ height:1px; background:var(--border); margin:2px 8px 10px; }
+  .company-add-btn{
+    display:flex; align-items:center; gap:6px; background:none; border:1px dashed var(--border); border-radius:8px;
+    padding:8px; font-size:12.5px; color:var(--text-muted); cursor:pointer; font-family:var(--font-body);
+  }
+  .company-add-btn:hover{ color:var(--accent); border-color:var(--accent); }
+  .company-add-btn svg{ width:13px; height:13px; flex-shrink:0; }
+  .company-add-form{ display:flex; flex-direction:column; gap:6px; }
+  .company-add-form input[type="text"], .company-add-form select{
+    border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:7px;
+    padding:7px 9px; font-size:13px; font-family:var(--font-body); width:100%;
+  }
+  .company-add-form input:focus, .company-add-form select:focus{ outline:none; border-color:var(--accent); }
+  .company-add-checkbox{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-secondary); padding:2px 1px; }
+  .company-add-checkbox input{ width:auto; margin:0; }
+  .company-add-actions{ display:flex; gap:6px; }
+  .company-add-actions button{ flex:1; border:none; border-radius:7px; padding:6px; font-size:12px; cursor:pointer; font-family:var(--font-body); }
+  .company-add-confirm{ background:var(--accent); color:var(--accent-ink); font-weight:600; }
+  .company-add-cancel{ background:var(--surface-2); color:var(--text-secondary); }
+
+  @media (max-width: 780px){
+    .shell{ flex-direction:column; }
+    .sidebar{
+      width:100%; min-height:0; position:static; border-right:none; border-bottom:1px solid var(--border);
+      flex-direction:row; align-items:center; padding:10px 12px; overflow-x:auto; gap:8px;
+    }
+    .sidebar-head{ display:none; }
+    .sidebar-divider{ width:1px; height:32px; margin:0 2px; flex-shrink:0; }
+    .all-companies-btn{ flex-shrink:0; white-space:nowrap; margin-bottom:0; width:auto; }
+    .company-list{ flex-direction:row; margin-bottom:0; flex-shrink:0; }
+    .company-item{ flex-shrink:0; }
+    .company-edit-btn{ opacity:.5; }
+    .company-move-btn{ opacity:.5; }
+    .company-rename-form{ padding:5px 4px; }
+    .company-rename-input{ width:120px; }
+    .company-add-btn{ flex-shrink:0; white-space:nowrap; }
+    .company-add-form{ flex-direction:row; flex-shrink:0; }
+  }
+
+  /* ---------- header ---------- */
+  .topbar{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:10px; background: var(--accent-soft);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .brand-mark svg{ width:20px; height:20px; }
+  .brand h1{ font-size: 21px; letter-spacing: -0.01em; }
+  .brand p{ margin:2px 0 0; font-size:12.5px; color: var(--text-secondary); }
+
+  .status{ display:flex; align-items:center; gap:7px; font-size:12px; color: var(--text-muted); }
+  .status .dot{ width:7px; height:7px; border-radius:50%; background: var(--text-muted); flex-shrink:0; }
+  .status.ok .dot{ background: #1baf7a; }
+  .status.busy .dot{ background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  .status.off .dot{ background: var(--danger); }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  .controls-row{ display:flex; align-items:center; gap:10px; margin-bottom: 16px; flex-wrap:wrap; }
+  select#monthSelect{
+    appearance:none; -webkit-appearance:none;
+    background: var(--surface); color: var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:8px 30px 8px 12px; font-size:13px; font-weight:500;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23545c62'><path d='M5.5 7.5l4.5 5 4.5-5z'/></svg>");
+    background-repeat:no-repeat; background-position: right 8px center; background-size:16px;
+    cursor:pointer;
+  }
+  select#monthSelect:focus{ outline: 2px solid var(--accent); outline-offset:1px; }
+
+  /* ---------- tabs ---------- */
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:18px; overflow-x:auto; }
+  .tab-btn{
+    display:inline-flex; align-items:center; gap:7px;
+    font-family: var(--font-display); font-weight:600; font-size:13.5px;
+    background:none; border:none; color: var(--text-muted); cursor:pointer;
+    padding:9px 14px 11px; border-bottom:2.5px solid transparent; border-radius:3px 3px 0 0; white-space:nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  .tab-btn svg{ width:15px; height:15px; opacity:.75; flex-shrink:0; }
+  .tab-btn:hover{ color: var(--text); }
+  .tab-btn.active{ color: var(--text); border-bottom-color: var(--accent); }
+  .tab-btn.active svg{ opacity:1; color: var(--accent); }
+  .tab-btn .count{ color: var(--text-muted); font-family: var(--font-mono); font-weight:500; font-size:12px; }
+  .tab-btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px var(--accent-soft); border-radius:6px; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  /* ---------- cards ---------- */
+  .card{
+    background: var(--surface); border:1px solid var(--border); border-radius:13px;
+    box-shadow: var(--shadow); transition: box-shadow .18s, transform .18s;
+  }
+  .card.card-lift:hover{ box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+  .card-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); gap:10px; flex-wrap:wrap; }
+  .card-head h2{ font-size:14.5px; }
+  .card-head .sub{ font-size:12px; color: var(--text-muted); margin-top:2px; }
+
+  /* ---------- table ---------- */
+  .table-wrap{ overflow-x:auto; }
+  table.grid{ width:100%; border-collapse:collapse; min-width: 760px; }
+  table.grid th{
+    text-align:left; font-family: var(--font-body); font-weight:600; font-size:11.5px;
+    text-transform:uppercase; letter-spacing:.04em; color: var(--text-muted);
+    background: var(--surface-2); padding:9px 10px; border-bottom:1px solid var(--border);
+    white-space:nowrap; position:sticky; top:0;
+  }
+  table.grid td{ padding:2px 6px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  table.grid tbody tr:hover{ background: var(--surface-2); }
+  table.grid th:first-child, table.grid td:first-child{ position:sticky; left:0; background:var(--surface); z-index:1; }
+  table.grid thead th:first-child{ background:var(--surface-2); z-index:2; }
+  table.grid tbody tr:hover td:first-child{ background: var(--surface-2); }
+
+  table.grid input, table.grid select{
+    width:100%; border:1px solid transparent; background:transparent; color:var(--text);
+    font-size:13px; padding:8px 6px; border-radius:6px; min-width: 90px;
+  }
+  table.grid input[type="date"]{ min-width:126px; }
+  /* Dátum sa má vždy zobrazovať vo formáte deň.mesiac.rok bez ohľadu na jazyk/nastavenie
+     prehliadača (natívny <input type="date"> si formát zobrazenia riadi sám podľa systému,
+     takže nad ním len prekrývame vlastný štítok s naším formátom — hodnota v poli aj naďalej
+     ostáva ISO YYYY-MM-DD, takže ukladanie a triedenie funguje úplne rovnako ako predtým).
+     Pri kliknutí/písaní priamo do poľa sa náš štítok skryje a vidno pôvodné natívne pole. */
+  table.grid td.date-td{ position:relative; }
+  table.grid td.date-td input[type="date"]{ color:transparent; }
+  table.grid td.date-td input[type="date"]:focus{ color:var(--text); }
+  table.grid td.date-td input[type="date"]:focus + .date-fmt{ visibility:hidden; }
+  table.grid td.date-td .date-fmt{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    pointer-events:none; font-size:13px; color:var(--text); white-space:nowrap;
+  }
+  table.grid input[type="number"]{ font-variant-numeric: tabular-nums; text-align:right; min-width:76px; }
+  table.grid select{ min-width: 190px; }
+  table.grid input:hover, table.grid select:hover{ border-color: var(--border); }
+  table.grid input:focus, table.grid select:focus{ outline:none; border-color: var(--accent); background: var(--surface); }
+  table.grid td.num{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; padding-right:12px; color: var(--text-secondary); white-space:nowrap; }
+  table.grid td.readonly-price{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; padding-right:14px; font-weight:500; }
+
+  tfoot td{ padding:10px; font-family: var(--font-mono); font-weight:600; border-top:2px solid var(--border); background: var(--surface-2); }
+  tfoot td.num{ text-align:right; font-variant-numeric: tabular-nums; }
+
+  .row-del{
+    width:28px; height:28px; border-radius:7px; border:1px solid transparent; background:transparent;
+    color: var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .row-del:hover{ background: var(--danger-soft); color: var(--danger); border-color: var(--danger-soft); }
+  .row-del svg{ width:14px; height:14px; }
+
+  .empty-row td{ padding:26px 14px; text-align:center; color: var(--text-muted); font-size:13px; }
+
+  .table-foot{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--border); }
+  .add-btn{
+    display:inline-flex; align-items:center; gap:6px; background: var(--accent-soft); color: var(--accent);
+    border:none; border-radius:8px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer;
+    transition: transform .12s, box-shadow .12s, filter .12s;
+  }
+  .add-btn:hover{ filter:brightness(0.96); transform: translateY(-1px); box-shadow: 0 4px 10px -4px rgba(0,0,0,0.25); }
+  .add-btn:active{ transform: translateY(0); }
+  .add-btn svg{ width:14px; height:14px; }
+
+  /* ---------- zákazka: materiál priamo v riadku ---------- */
+  .row-toggle-btn{
+    width:24px; height:24px; border-radius:6px; border:none; background:transparent;
+    color: var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .row-toggle-btn:hover{ background: var(--surface-2); color: var(--accent); }
+  .row-toggle-btn svg{ width:12px; height:12px; transition: transform .15s; }
+  .row-toggle-btn.open svg{ transform: rotate(180deg); }
+  .ticket-material-col{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; padding-right:12px; font-size:12.5px; color: var(--text-secondary); white-space:nowrap; }
+  .material-subrow td{ border-bottom:1px solid var(--border); }
+  .material-sub-cell{ padding:0 !important; }
+  .material-sub-wrap{ padding:12px 16px 14px 44px; background: var(--surface-2); }
+  .material-sub-head{ margin-bottom:8px; }
+  .material-sub-head .lbl{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); }
+  .material-inline-empty{ font-size:12.5px; color:var(--text-muted); padding:2px 0 6px; }
+  table.material-inline{ width:100%; border-collapse:collapse; }
+  table.material-inline th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted);
+    padding:0 6px 5px; font-weight:600;
+  }
+  table.material-inline td{ padding:3px 6px; }
+  table.material-inline input, table.material-inline select{
+    width:100%; border:1px solid var(--border); background:var(--surface); color:var(--text);
+    font-size:12.5px; padding:6px; border-radius:6px; min-width:0;
+  }
+  table.material-inline input[type="number"]{ text-align:right; font-variant-numeric: tabular-nums; }
+  table.material-inline td.readonly-price{ font-family: var(--font-mono); text-align:right; padding-right:10px; font-size:12.5px; white-space:nowrap; }
+  .material-inline-add{
+    display:inline-flex; align-items:center; gap:5px; background:none; border:1px dashed var(--border);
+    color:var(--text-secondary); border-radius:7px; padding:6px 10px; font-size:12px; cursor:pointer; margin-top:6px;
+  }
+  .material-inline-add:hover{ border-color: var(--accent); color: var(--accent); }
+  .material-inline-add svg{ width:12px; height:12px; }
+  /* ---------- kniha jázd ---------- */
+  .logbook-neg{ color: var(--danger); }
+  .logbook-warn{ font-size:11px; color: var(--text-muted); font-weight:500; margin-left:4px; }
+  .unassigned-card{ margin-top:14px; }
+  .unassigned-card .card-head h2{ font-size:14px; }
+  .unassigned-card select{ width:100%; min-width:170px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:6px; padding:6px; font-size:12.5px; }
+
+  /* ---------- prehlad: kpi tiles ---------- */
+  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background: var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .kpi{ background: var(--surface); padding:14px 16px; }
+  .kpi.hero{ background: var(--accent-soft); }
+  .kpi .label{ font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color: var(--text-muted); font-weight:600; }
+  .kpi .value{ font-family: var(--font-display); font-size:21px; font-weight:600; margin-top:6px; font-variant-numeric: normal; }
+  .kpi.hero .value{ font-size:26px; color: var(--accent); }
+  .kpi .delta{ font-size:11.5px; margin-top:4px; font-family: var(--font-mono); }
+  .kpi .delta.up{ color:#1a8f4f; } .kpi .delta.down{ color: var(--danger); }
+  :root[data-theme="dark"] .kpi .delta.up, @media (prefers-color-scheme: dark){ .kpi .delta.up{ color:#3fc383; } }
+
+  .settings-strip{ display:flex; gap:18px; align-items:center; padding:10px 16px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .settings-strip label{ font-size:11.5px; color: var(--text-muted); display:flex; align-items:center; gap:6px; }
+  .settings-strip input{ width:64px; border:1px solid var(--border); background: var(--surface-2); color:var(--text); border-radius:6px; padding:5px 7px; font-size:12.5px; font-family: var(--font-mono); }
+  .settings-strip-hint{ font-size:11px; color: var(--text-muted); }
+  .settings-strip label.settings-check{ cursor:pointer; }
+  .settings-strip label.settings-check input{ width:auto; padding:0; }
+  /* Keď je vypnuté "Suma za dopravu" pre danú firmu, stĺpec so sumou v Kilometrovnom sa
+     skryje (je to vždy 4. stĺpec — Dátum/Km/Trasa/Suma za dopravu/–), tabuľka bez neho
+     naďalej ukazuje len počet najazdených km. */
+  #panel-mileage.hide-mileage-sum table.grid th:nth-child(4),
+  #panel-mileage.hide-mileage-sum table.grid td:nth-child(4){ display:none; }
+
+  .charts-grid{ display:grid; grid-template-columns: 1.4fr 1fr; gap:14px; margin-top:14px; }
+  @media (max-width: 860px){ .charts-grid{ grid-template-columns:1fr; } }
+
+  .legend{ display:flex; gap:14px; padding:0 16px 12px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-secondary); }
+  .legend-dot{ width:9px; height:9px; border-radius:2px; }
+
+  .chart-box{ padding: 4px 10px 8px; }
+  svg.chart{ width:100%; height:auto; overflow:visible; }
+  .chart-empty{ padding:34px 16px; text-align:center; color: var(--text-muted); font-size:13px; }
+
+  .cust-list{ padding:6px 16px 16px; display:flex; flex-direction:column; gap:10px; }
+  .cust-row{ display:grid; grid-template-columns: 22px 1fr auto; gap:10px; align-items:center; }
+  .cust-rank{ font-family: var(--font-mono); color: var(--text-muted); font-size:12px; }
+  .cust-name{ font-size:13px; }
+  .cust-meta{ font-size:11.5px; color: var(--text-muted); margin-top:2px; }
+  .cust-bar-track{ grid-column: 1 / -1; height:6px; border-radius:4px; background: var(--surface-2); overflow:hidden; }
+  .cust-bar-fill{ height:100%; background: var(--accent); border-radius:4px; }
+  .cust-amount{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight:600; font-size:13px; }
+
+  .tooltip{
+    position:fixed; pointer-events:none; background: var(--text); color: var(--bg);
+    font-size:12px; padding:8px 10px; border-radius:8px; box-shadow: var(--shadow);
+    opacity:0; transform: translate(-50%,-100%); transition: opacity .1s; z-index:50; white-space:nowrap;
+  }
+  .tooltip.show{ opacity:1; }
+  .tooltip .tt-title{ font-weight:600; margin-bottom:4px; font-family: var(--font-display); }
+  .tooltip .tt-row{ display:flex; justify-content:space-between; gap:14px; }
+  .tooltip .tt-dot{ display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:5px; }
+
+  .warn-banner{ background: var(--danger-soft); color: var(--danger); border:1px solid var(--danger-soft); border-radius:10px; padding:10px 14px; font-size:12.5px; margin-bottom:14px; display:none; }
+  .warn-banner.show{ display:block; }
+
+  ::selection{ background: var(--accent-soft); }
+
+  /* ---------- login gate ---------- */
+  .login-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-card{
+    width:100%; max-width:340px; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; box-shadow:var(--shadow); padding:26px 24px;
+  }
+  .login-card h1{ font-size:19px; margin-bottom:4px; }
+  .login-card p{ font-size:12.5px; color:var(--text-muted); margin:0 0 18px; }
+  .login-card label{ display:block; font-size:12px; color:var(--text-secondary); margin:12px 0 5px; font-family:var(--font-body); }
+  .login-card input{
+    width:100%; border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+    border-radius:8px; padding:9px 11px; font-size:14px;
+  }
+  .login-card input:focus{ outline:none; border-color:var(--accent); }
+  .login-btn{
+    width:100%; margin-top:18px; background:var(--accent); color:var(--accent-ink); border:none;
+    border-radius:8px; padding:11px; font-size:13.5px; font-weight:600; font-family:var(--font-body); cursor:pointer;
+    transition: transform .12s, box-shadow .12s, filter .12s;
+  }
+  .login-btn:hover{ filter:brightness(0.95); transform: translateY(-1px); box-shadow: 0 6px 16px -6px rgba(0,0,0,0.3); }
+  .login-btn:disabled{ opacity:.6; cursor:default; }
+  .login-error{ color:var(--danger); font-size:12px; margin-top:10px; display:none; }
+  .login-error.show{ display:block; }
+  .login-setup-note{ font-size:11.5px; color:var(--text-muted); margin-top:16px; line-height:1.5; padding-top:14px; border-top:1px solid var(--border); }
+  .signout-btn{ background:none; border:none; color:var(--text-muted); font-size:12px; cursor:pointer; text-decoration:underline; padding:0; }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>FUSION servis</h1>
+    <p>Prihlás sa svojím účtom, aby si videl svoje dáta na všetkých zariadeniach.</p>
+    <form id="loginForm">
+      <label for="loginEmail">E-mail</label>
+      <input type="email" id="loginEmail" autocomplete="username" required>
+      <label for="loginPass">Heslo</label>
+      <input type="password" id="loginPass" autocomplete="current-password" required>
+      <button type="submit" class="login-btn" id="loginBtn">Prihlásiť sa</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+    <div class="login-setup-note">Ešte nemáš prihlásenie? Vytvor si ho v Firebase Console → Authentication → Users → „Add user“ (pozri návod k appke).</div>
+  </div>
+</div>
+
+<div class="shell" id="appRoot" hidden>
+  <aside class="sidebar">
+    <button class="all-companies-btn" id="allCompaniesBtn" type="button">
+      <span class="company-avatar all-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1.3"/><rect x="11" y="3" width="6" height="6" rx="1.3"/><rect x="3" y="11" width="6" height="6" rx="1.3"/><rect x="11" y="11" width="6" height="6" rx="1.3"/></svg></span>
+      <span class="company-name">Celý príjem</span>
+    </button>
+    <button class="all-companies-btn" id="logbookBtn" type="button">
+      <span class="company-avatar all-avatar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.5 6 6h8l3 6.5"/><path d="M3 12.5h14v2.5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V14H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><circle cx="6.5" cy="12.5" r=".2"/><circle cx="13.5" cy="12.5" r=".2"/></svg></span>
+      <span class="company-name">Kniha jázd</span>
+    </button>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-head">Firmy</div>
+    <div class="company-list" id="companyList"></div>
+    <button class="company-add-btn" id="addCompanyBtn" type="button">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+      Pridať firmu
+    </button>
+    <form class="company-add-form" id="addCompanyForm" hidden>
+      <input type="text" id="addCompanyInput" placeholder="Názov firmy" autocomplete="off">
+      <select id="addCompanyMode">
+        <option value="tariff">Zákazky: cenník (ako Orech)</option>
+        <option value="hourly">Zákazky: hodinovka</option>
+        <option value="manual">Zákazky: stroj + vlastná cena</option>
+        <option value="simple">Zákazky: názov + cena (bez DPH)</option>
+        <option value="hours">Zákazky: úkon + hodiny (bez ceny)</option>
+        <option value="task">Zákazky: úkon + cena</option>
+      </select>
+      <label class="company-add-checkbox"><input type="checkbox" id="addCompanyMaterials" checked>Záložka Materiál</label>
+      <label class="company-add-checkbox"><input type="checkbox" id="addCompanyMileage" checked>Záložka Kilometrovné</label>
+      <div class="company-add-actions">
+        <button type="submit" class="company-add-confirm">Pridať</button>
+        <button type="button" id="cancelAddCompany" class="company-add-cancel">Zrušiť</button>
+      </div>
+    </form>
+  </aside>
+
+  <div class="app">
+  <div class="warn-banner" id="dbWarn">Táto stránka práve nemá spojenie s databázou. Skontroluj internetové pripojenie a skús ju znova otvoriť.</div>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3c0 2-2 2.5-2 5a2 2 0 0 0 4 0c0-2.5-2-3-2-5Z"/>
+          <path d="M13.5 3c0 2-2 2.5-2 5a2 2 0 0 0 4 0c0-2.5-2-3-2-5Z"/>
+          <path d="M4 12h13a3 3 0 0 1 0 6h-1"/>
+          <path d="M4 12v5a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-1"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Roman Páleš</h1>
+        <p>Zákazky, materiál a kilometrovné — mesačná fakturácia</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="status" id="statusEl"><span class="dot"></span><span id="statusText">pripája sa…</span></div>
+      <button class="signout-btn" id="signOutBtn">odhlásiť sa</button>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <select id="monthSelect"></select>
+  </div>
+
+  <div class="tabs" id="tabsBar">
+    <button class="tab-btn active" data-tab="tickets"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5V6a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v2.5a1.5 1.5 0 0 0 0 3V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.5a1.5 1.5 0 0 0 0-3Z"/><path d="M12 5.5v9" stroke-dasharray="1.6 1.6"/></svg>Zákazky <span class="count" id="cnt-tickets"></span></button>
+    <button class="tab-btn" id="materialsTabBtn" data-tab="materials" data-requires="materials"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 3 6.5 10 10l7-3.5Z"/><path d="M3 6.5V13l7 3.5M17 6.5V13l-7 3.5v-6.5"/></svg>Materiál <span class="count" id="cnt-materials"></span></button>
+    <button class="tab-btn" data-tab="mileage" data-requires="mileage"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.5 6 6h8l3 6.5"/><path d="M3 12.5h14v2.5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V14H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><circle cx="6.5" cy="12.5" r=".2"/><circle cx="13.5" cy="12.5" r=".2"/></svg>Kilometrovné <span class="count" id="cnt-mileage"></span></button>
+    <button class="tab-btn" data-tab="prehlad"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M10 16V4M16 16v-6.5"/></svg>Prehľad</button>
+  </div>
+
+  <main>
+    <section class="panel active" id="panel-tickets">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr id="ticketsHeadRow"></tr></thead>
+            <tbody id="ticketsBody"></tbody>
+            <tfoot><tr id="ticketsFootRow"></tr></tfoot>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span style="font-size:12px;color:var(--text-muted)" id="ticketsHint">Zoznam zákaziek za vybraný mesiac</span>
+          <button class="add-btn" id="addTicketBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať zákazku</button>
+        </div>
+      </div>
+
+      <div class="card unassigned-card" id="unassignedMaterialsCard" hidden>
+        <div class="card-head"><div><h2>Nepriradený materiál</h2><div class="sub">Tento materiál zatiaľ nie je priradený k žiadnej zákazke — vyber ku ktorej patrí.</div></div></div>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr><th>Dátum</th><th>Položka</th><th>Počet ks</th><th>Cena/ks</th><th>Spolu</th><th>Zákazka</th><th></th></tr></thead>
+            <tbody id="unassignedMaterialsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-materials">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr>
+              <th>Dátum</th><th>Položka</th><th>Počet ks</th><th>Cena/ks</th><th>Spolu bez DPH</th><th>Poznámka</th><th></th>
+            </tr></thead>
+            <tbody id="materialsBody"></tbody>
+            <tfoot><tr>
+              <td colspan="4">Spolu</td>
+              <td class="num" id="materialsSum">–</td>
+              <td colspan="2"></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span style="font-size:12px;color:var(--text-muted)">Použitý materiál za vybraný mesiac</span>
+          <button class="add-btn" id="addMaterialBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať položku</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-mileage">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr><th>Dátum</th><th>Km</th><th>Trasa</th><th>Suma za dopravu</th><th></th></tr></thead>
+            <tbody id="mileageBody"></tbody>
+            <tfoot><tr>
+              <td>Spolu</td>
+              <td class="num" id="mileageSumKm">–</td>
+              <td></td>
+              <td class="num" id="mileageSumEur">–</td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span style="font-size:12px;color:var(--text-muted)">Jazdy za vybraný mesiac</span>
+          <button class="add-btn" id="addMileageBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať jazdu</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-prehlad">
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-head">
+          <div>
+            <h2 id="prehladTitle">Fakturácia</h2>
+            <div class="sub" id="prehladSub">–</div>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">Servis</div><div class="value" id="kpiServis">–</div></div>
+          <div class="kpi"><div class="label">Doprava</div><div class="value" id="kpiDoprava">–</div></div>
+          <div class="kpi"><div class="label">Materiál</div><div class="value" id="kpiMaterial">–</div></div>
+          <div class="kpi" id="kpiSubtotalCard"><div class="label">Spolu bez DPH</div><div class="value" id="kpiSubtotal">–</div><div class="delta" id="kpiDelta"></div></div>
+          <div class="kpi hero" id="kpiTotalCard" data-requires="vat"><div class="label">Spolu s DPH</div><div class="value" id="kpiTotal">–</div></div>
+          <div class="kpi"><div class="label">Km / zákazky</div><div class="value" id="kpiCounts" style="font-size:16px">–</div></div>
+        </div>
+        <div class="settings-strip">
+          <label id="hourlyRateRow" hidden>Hodinová sadzba <input type="number" step="0.5" id="hourlyRateInput"> €/hod</label>
+          <label>Sadzba za km <input type="number" step="0.01" id="kmRateInput"> €/km</label>
+          <label data-requires="vat">DPH <input type="number" step="1" id="vatRateInput"> %</label>
+          <label data-requires="mileage" class="settings-check"><input type="checkbox" id="showMileageSumInput">Suma za dopravu v Kilometrovnom</label>
+        </div>
+        <div class="settings-strip settings-strip-weights">
+          <span class="settings-strip-hint">Koľko z tejto firmy sa počíta do "Všetky firmy":</span>
+          <label>Servis <input type="number" step="5" id="servisWeightInput"> %</label>
+          <label data-requires="materials">Materiál <input type="number" step="5" id="materialWeightInput"> %</label>
+          <label data-requires="mileage">Doprava <input type="number" step="5" id="dopravaWeightInput"> %</label>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card card-lift">
+          <div class="card-head"><div><h2>Fakturácia podľa mesiacov</h2><div class="sub">Servis, doprava a materiál, bez DPH</div></div></div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-servis)"></span>Servis</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-doprava)"></span>Doprava</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-material)"></span>Materiál</span>
+          </div>
+          <div class="chart-box" id="chartRevenue"></div>
+        </div>
+        <div class="card card-lift">
+          <div class="card-head"><div><h2>Počet zákaziek</h2><div class="sub">Podľa mesiacov</div></div></div>
+          <div class="chart-box" id="chartCount"></div>
+        </div>
+      </div>
+
+      <div class="card card-lift" style="margin-top:14px;">
+        <div class="card-head"><div><h2>Najlepší zákazníci</h2><div class="sub">Podľa tržby, všetky obdobia</div></div></div>
+        <div class="cust-list" id="custList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-allview">
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-head">
+          <div>
+            <h2 id="allTitle">Celý príjem</h2>
+            <div class="sub" id="allSub">–</div>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">Servis</div><div class="value" id="allKpiServis">–</div></div>
+          <div class="kpi"><div class="label">Doprava</div><div class="value" id="allKpiDoprava">–</div></div>
+          <div class="kpi"><div class="label">Materiál</div><div class="value" id="allKpiMaterial">–</div></div>
+          <div class="kpi"><div class="label">Spolu bez DPH</div><div class="value" id="allKpiSubtotal">–</div></div>
+          <div class="kpi hero"><div class="label">Spolu s DPH</div><div class="value" id="allKpiTotal">–</div></div>
+          <div class="kpi"><div class="label">Km / zákazky</div><div class="value" id="allKpiCounts" style="font-size:16px">–</div></div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card card-lift">
+          <div class="card-head"><div><h2>Fakturácia podľa mesiacov</h2><div class="sub">Všetky firmy spolu, bez DPH</div></div></div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-servis)"></span>Servis</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-doprava)"></span>Doprava</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-material)"></span>Materiál</span>
+          </div>
+          <div class="chart-box" id="allChartRevenue"></div>
+        </div>
+        <div class="card card-lift">
+          <div class="card-head"><div><h2>Počet zákaziek</h2><div class="sub">Podľa mesiacov, všetky firmy</div></div></div>
+          <div class="chart-box" id="allChartCount"></div>
+        </div>
+      </div>
+
+      <div class="card card-lift" style="margin-top:14px;">
+        <div class="card-head"><div><h2>Podľa firiem</h2><div class="sub" id="allCompSub">Tržba bez DPH za vybraný mesiac</div></div></div>
+        <div class="cust-list" id="allCompList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-logbook">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Kniha jázd</h2>
+            <div class="sub">Stav tachometra podľa mesiacov — rozdiel oproti súčtu firemných km je súkromná jazda</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr id="logbookHeadRow"></tr></thead>
+            <tbody id="logbookBody"></tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span style="font-size:12px;color:var(--text-muted)">Riadok pridaj pre mesiac, kedy si si zapísal aktuálny stav tachometra.</span>
+          <button class="add-btn" id="addLogbookBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať mesiac</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  // ============================================================
+  // SEM VLOŽ SVOJ FIREBASE CONFIG
+  // (Firebase Console → Project settings → Your apps → Web app → SDK setup)
+  // Presný postup je v priloženom návode NAVOD.md.
+  // ============================================================
+  var firebaseConfig = {
+    apiKey: "AIzaSyDKC62n2LE-eowySIv6CZUAacuWlSENSG4",
+    authDomain: "fusion-de1ae.firebaseapp.com",
+    projectId: "fusion-de1ae",
+    storageBucket: "fusion-de1ae.firebasestorage.app",
+    messagingSenderId: "152038766744",
+    appId: "1:152038766744:web:38ea4b8515b6e2b0c838ed"
+  };
+</script>
+
+<script>
+(function(){
+  "use strict";
+
+  // Cenník a katalóg materiálu z tvojho augustového excelu — použije sa len raz,
+  // pri prvom spustení appky, na naplnenie databázy (potom si ich vieš upravovať priamo v appke).
+  var DEFAULT_PRICE_LIST = [
+    {id:'oprava-s3-t1', label:'Oprava – Skupina 3 / Tarif 1', price:58},
+    {id:'oprava-s3-t2', label:'Oprava – Skupina 3 / Tarif 2', price:69},
+    {id:'udrzba-s3-t5', label:'Údržba – Skupina 3 / Tarif 5', price:69},
+    {id:'instalacia-s2-t3', label:'Inštalácia – Skupina 2 / Tarif 3', price:109},
+    {id:'instalacia-s3-t3', label:'Inštalácia – Skupina 3 / Tarif 3', price:126},
+    {id:'deinstalacia-s2-t4', label:'Deinštalácia – Skupina 2 / Tarif 4', price:86},
+    {id:'deinstalacia-s3-t4', label:'Deinštalácia – Skupina 3 / Tarif 4', price:109},
+    {id:'hodinovka-s7-t1', label:'Hodinová mzda – Skupina 7 / Tarif 1', price:35}
+  ];
+  var DEFAULT_MATERIALS = [
+    {id:'item-01', name:'Hadica Nápojová 1m', price:1.00},
+    {id:'item-02', name:'Spojka guľový ventil 3/8', price:10.95},
+    {id:'item-03', name:'Spojka roh nástrčná 3/8', price:5.22},
+    {id:'item-04', name:'Spojka rozbočka T 3/8', price:5.22},
+    {id:'item-05', name:'Spojka rozbočka Y 3/8', price:5.48},
+    {id:'item-06', name:'Spojka vnútorný závit 1/2 hadica 3/8', price:6.60},
+    {id:'item-07', name:'Spojka vnútorný závit 3/8 hadica 3/8', price:6.30},
+    {id:'item-08', name:'Spojka vnútorný závit 3/4 hadica 3/8', price:6.30},
+    {id:'item-09', name:'Mosadzná redukcia 3/8 x 3/4', price:3.30},
+    {id:'item-10', name:'Mosadzná redukcia vonkajší závit 3/8 x 3/4', price:3.30},
+    {id:'item-11', name:'Mosadzná vsuvka 3/8 x 3/8', price:2.25},
+    {id:'item-12', name:'FlexiHadica 3/8 na 3/8 30/40cm', price:3.75},
+    {id:'item-13', name:'FlexiHadica 3/8 na 3/8 50/60cm', price:3.75},
+    {id:'item-14', name:'FlexiHadica 3/8 na 3/8 70/80cm', price:4.20},
+    {id:'item-15', name:'FlexiHadica 3/8 na 1/2 90/100cm', price:4.35},
+    {id:'item-16', name:'FlexiHadica 3/8 na 3/8 120/150cm', price:4.95},
+    {id:'item-17', name:'FlexiHadica 3/8 na 3/8 200cm', price:5.25},
+    {id:'item-18', name:'Materiál na zapojenie páky (rozvodná skrinka + 2m káblu)', price:30.00},
+    {id:'item-19', name:'Bandaska', price:15.00},
+    {id:'item-20', name:'Čerpadlo Cometa VIP', price:32.00},
+    {id:'item-21', name:'Čerpadlo Modré', price:25.00}
+  ];
+
+  var MONTHS = ['január','február','marec','apríl','máj','jún','júl','august','september','október','november','december'];
+  var MONTHS_SHORT = ['jan','feb','mar','apr','máj','jún','júl','aug','sep','okt','nov','dec'];
+
+  function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function monthKeyNow(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1); }
+  function monthKeyOf(dateStr){ return (dateStr||'').slice(0,7); }
+  function monthLabel(key){ var p=key.split('-'); var idx=parseInt(p[1],10)-1; return MONTHS[idx]+' '+p[0]; }
+  // ISO 'YYYY-MM-DD' -> zobrazenie v tvare deň.mesiac.rok (napr. '2026-08-04' -> '4.8.2026').
+  function fmtDateSk(iso){
+    if(!iso) return '';
+    var p = String(iso).split('-');
+    if(p.length!==3) return iso;
+    var y=parseInt(p[0],10), m=parseInt(p[1],10), d=parseInt(p[2],10);
+    if(!y||!m||!d) return iso;
+    return d+'.'+m+'.'+y;
+  }
+  function monthShort(key){ var p=key.split('-'); var idx=parseInt(p[1],10)-1; return MONTHS_SHORT[idx]+' '+p[0].slice(2); }
+  function shiftMonth(key,delta){ var p=key.split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10)-1+delta; y+=Math.floor(m/12); m=((m%12)+12)%12; return y+'-'+pad(m+1); }
+  function fmtEUR(n){ return new Intl.NumberFormat('sk-SK',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(n||0); }
+  function fmtNum(n,d){ return new Intl.NumberFormat('sk-SK',{maximumFractionDigits:d==null?0:d}).format(n||0); }
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function lsGet(k,fallback){ try{ var v=localStorage.getItem(k); return v==null?fallback:v; }catch(e){ return fallback; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+  var state = {
+    db: null,
+    companies: [], companyId: lsGet('fs_company', null), _activeCompanyId: null, _unsubs: [],
+    tickets: [], materials: [], mileage: [], priceList: [], catalog: [],
+    settings: { kmRate: 0.58, vatRate: 0.2, hourlyRate: 35, servisWeight: 1, materialWeight: 1, dopravaWeight: 1 },
+    // "Všetky firmy" — súhrnný pohľad naprieč všetkými firmami naraz (bez záložiek Zákazky/Materiál/Kilometrovné).
+    viewAll: lsGet('fs_viewall','0')==='1', allData: {}, _allUnsubs: [],
+    // "Kniha jázd" — druhý súhrnný pohľad (tiež naprieč firmami): stav tachometra po mesiacoch
+    // a rozdelenie najazdených km na firemné (podľa Kilometrovného jednotlivých firiem) a súkromné.
+    viewLogbook: lsGet('fs_viewlogbook','0')==='1', logbook: {},
+    activeTab: lsGet('fs_tab','tickets'),
+    // Ktoré riadky zákaziek majú práve rozbalený zoznam materiálu (len dočasný UI stav, neukladá sa).
+    expandedTickets: {},
+    // Mesiac sa NEUKLADÁ medzi otvoreniami appky — pri každom novom spustení appka
+    // sama naskočí na aktuálny mesiac (aj keď medzitým začal nový), aby si nemusel
+    // nič prepínať ručne. Počas jedného sedenia si vieš mesiac prepnúť dole v selecte.
+    month: monthKeyNow()
+  };
+
+  function companyColl(name){ return state.db.collection('companies/'+state.companyId+'/'+name); }
+  function companyDoc(path){ return state.db.doc('companies/'+state.companyId+'/'+path); }
+  // Firma s tarifným režimom (Nestlé) jediná pracuje s DPH — ceny bez aj s DPH, sadzba DPH
+  // v Prehľade. Ostatné firmy riešia len ceny bez DPH, nikde sa im DPH nedopočítava.
+  function normalizeTicketMode(raw){
+    return (raw==='hourly'||raw==='manual'||raw==='simple'||raw==='hours'||raw==='task') ? raw : 'tariff';
+  }
+  function currentCompany(){
+    var c = state.companies.filter(function(x){ return x.id===state.companyId; })[0] || {};
+    var mode = normalizeTicketMode(c.ticketMode);
+    return {
+      id: state.companyId,
+      name: c.name || '',
+      ticketMode: mode,
+      usesVat: mode === 'tariff',
+      showMaterials: c.showMaterials !== false,
+      showMileage: c.showMileage !== false
+    };
+  }
+  // Skryje/zobrazí záložky Materiál/Kilometrovné podľa nastavenia firmy a prepne preč z nich, ak sú práve otvorené a firma ich nemá.
+  function applyCompanyUI(){
+    var company = currentCompany();
+    // V tarifných firmách (napr. Nestlé) sa materiál pridáva priamo v riadku zákazky,
+    // takže samostatná záložka Materiál sa tam neukazuje.
+    var materialsInline = company.ticketMode === 'tariff' && company.showMaterials;
+    document.querySelectorAll('[data-requires="materials"]').forEach(function(el){ el.hidden = !company.showMaterials; });
+    document.querySelectorAll('[data-requires="mileage"]').forEach(function(el){ el.hidden = !company.showMileage; });
+    // Len tarifná firma (Nestlé) rieši DPH — u ostatných firiem sa "Spolu s DPH" a sadzba DPH
+    // vôbec neukazujú, "Spolu bez DPH" namiesto toho preberá zvýraznenú (hero) dlaždicu.
+    document.querySelectorAll('[data-requires="vat"]').forEach(function(el){ el.hidden = !company.usesVat; });
+    var subCard = document.getElementById('kpiSubtotalCard');
+    if(subCard) subCard.classList.toggle('hero', !company.usesVat);
+    if(materialsInline){
+      var matTab = document.getElementById('materialsTabBtn');
+      if(matTab) matTab.hidden = true;
+    }
+    if((!company.showMaterials || materialsInline) && state.activeTab==='materials'){
+      state.activeTab = 'tickets'; lsSet('fs_tab','tickets');
+    }
+    if(!company.showMileage && state.activeTab==='mileage'){
+      state.activeTab = 'tickets'; lsSet('fs_tab','tickets');
+    }
+    updateViewMode();
+  }
+  // Prepne medzi pohľadom na jednu firmu (záložky Zákazky/Materiál/Kilometrovné/Prehľad)
+  // a súhrnným pohľadom "Všetky firmy" (len jedna spoločná dashboard sekcia).
+  function updateViewMode(){
+    var combined = state.viewAll || state.viewLogbook;
+    document.getElementById('tabsBar').hidden = combined;
+    // Kniha jázd zobrazuje celú históriu naraz (mesiac je riadok tabuľky) — výber mesiaca hore sa jej netýka.
+    var controlsRow = document.querySelector('.controls-row');
+    if(controlsRow) controlsRow.hidden = state.viewLogbook;
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', !combined && b.dataset.tab===state.activeTab); });
+    var activePanelId = state.viewLogbook ? 'panel-logbook' : (state.viewAll ? 'panel-allview' : 'panel-'+state.activeTab);
+    document.querySelectorAll('.panel').forEach(function(p){
+      p.classList.toggle('active', p.id===activePanelId);
+    });
+    document.getElementById('allCompaniesBtn').classList.toggle('active', state.viewAll);
+    var lbBtn = document.getElementById('logbookBtn');
+    if(lbBtn) lbBtn.classList.toggle('active', state.viewLogbook);
+  }
+
+  var pending = 0;
+  function markBusy(delta){
+    pending += delta;
+    var el = document.getElementById('statusEl');
+    var txt = document.getElementById('statusText');
+    if(pending>0){ el.className='status busy'; txt.textContent='ukladá sa…'; }
+    else { el.className='status ok'; txt.textContent='uložené'; }
+  }
+
+  // ---------------- Firebase bootstrap ----------------
+  var auth, firestore;
+  // NÁHĽADOVÝ REŽIM: keď je true, appka beží celá len v pamäti prehliadača (žiadne
+  // Firebase, žiadne prihlásenie) — slúži len na to, aby Roman videl zmeny naživo v chate.
+  // V nasadenej appke (tá, čo ide na GitHub) musí byť vždy false.
+  var PREVIEW_MODE = false;
+
+  function initFirebase(){
+    if(PREVIEW_MODE){
+      document.getElementById('loginScreen').hidden = true;
+      document.getElementById('appRoot').hidden = false;
+      document.getElementById('signOutBtn').hidden = true;
+      firestore = createMockFirestore();
+      initDb();
+      return;
+    }
+    if(typeof firebase === 'undefined' || !firebaseConfig || firebaseConfig.apiKey.indexOf('TU_VLOZ') === 0){
+      document.getElementById('loginError').textContent = 'Appka ešte nie je nastavená — vlož Firebase config (pozri návod).';
+      document.getElementById('loginError').classList.add('show');
+      return;
+    }
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    firestore = firebase.firestore();
+
+    auth.onAuthStateChanged(function(user){
+      if(user){
+        document.getElementById('loginScreen').hidden = true;
+        document.getElementById('appRoot').hidden = false;
+        initDb();
+      } else {
+        document.getElementById('loginScreen').hidden = false;
+        document.getElementById('appRoot').hidden = true;
+      }
+    });
+  }
+
+  // Jednoduchá "databáza" v pamäti prehliadača — má rovnaký tvar volaní ako Firestore
+  // (collection/doc/add/update/delete/onSnapshot), takže zvyšok appky sa vôbec nemusí líšiť
+  // medzi náhľadom a ostrou verziou. Používa sa LEN keď je PREVIEW_MODE = true.
+  function createMockFirestore(){
+    var C = 'companies/orech/';
+    var CA = 'companies/astra/';
+    var CW = 'companies/winnie/';
+    var CO2 = 'companies/orech2/';
+    var COT = 'companies/ostatne/';
+    var store = {
+      companies: {
+        orech: { name:'Nestlé', createdAt: 1, order:0, ticketMode:'tariff', showMaterials:true, showMileage:true },
+        astra: { name:'Astra vending', createdAt: 2, order:1, ticketMode:'hourly', showMaterials:false, showMileage:true },
+        orech2: { name:'Orech', createdAt: 4, order:2, ticketMode:'hours', showMaterials:true, showMileage:true },
+        winnie: { name:'Winnie', createdAt: 3, order:3, ticketMode:'manual', showMaterials:false, showMileage:false },
+        ostatne: { name:'Ostatné', createdAt: 5, order:4, ticketMode:'task', showMaterials:false, showMileage:false }
+      }
+    };
+    store[C+'tickets'] = {
+      t1:{date:'2026-08-04', ticketNum:'4988659', customer:'Minit Ružová dolina', priceKey:'oprava-s3-t2', serviceLabel:'Oprava – Skupina 3 / Tarif 2', priceNoVat:69, filtre:'', note:''},
+      t2:{date:'2026-08-11', ticketNum:'5003749', customer:'Hotel Tevel', priceKey:'deinstalacia-s3-t4', serviceLabel:'Deinštalácia – Skupina 3 / Tarif 4', priceNoVat:109, filtre:'', note:''},
+      t3:{date:'2026-08-18', ticketNum:'5059070', customer:'Barcelona bistro', priceKey:'instalacia-s3-t3', serviceLabel:'Inštalácia – Skupina 3 / Tarif 3', priceNoVat:126, filtre:'BWT V + Hlava + Aquastop', note:''},
+      t4:{date:'2026-07-10', ticketNum:'4988000', customer:'Minit Ružová dolina', priceKey:'udrzba-s3-t5', serviceLabel:'Údržba – Skupina 3 / Tarif 5', priceNoVat:69, filtre:'', note:''},
+      t5:{date:'2026-06-10', ticketNum:'4987000', customer:'SLOVCLEAN a.s.', priceKey:'oprava-s3-t1', serviceLabel:'Oprava – Skupina 3 / Tarif 1', priceNoVat:58, filtre:'', note:''}
+    };
+    store[C+'materialsUsage'] = {
+      m1:{date:'2026-08-04', itemKey:'item-01', itemName:'Hadica Nápojová 1m', qty:10, unitPrice:1, note:'', ticketId:'t1'},
+      m2:{date:'2026-08-17', itemKey:'item-03', itemName:'Spojka roh nástrčná 3/8', qty:2, unitPrice:5.22, note:''}
+    };
+    // Dátumy zámerne mimo importovaného obdobia Knihy jázd (dec. 2025 – sep. 2026), aby sa
+    // nekrížili so seedLogbookIfEmpty() nižšie (tá by inak import za tento mesiac preskočila).
+    store[C+'mileage'] = {
+      k1:{date:'2025-11-04', km:250, route:'Vrable - Kurbel - Lyreco - Danube AirPort'},
+      k2:{date:'2025-11-20', km:700, route:'Vráble - Kúpele Sliač - Minit OC Forum'}
+    };
+    store[C+'priceList'] = {};
+    store[C+'materialsCatalog'] = {};
+    store[C+'settings'] = { main: { kmRate:0.58, vatRate:0.2, servisWeight:0.8, materialWeight:0.2, dopravaWeight:0.2 } };
+    DEFAULT_PRICE_LIST.forEach(function(p){ store[C+'priceList'][p.id] = {label:p.label, price:p.price}; });
+    DEFAULT_MATERIALS.forEach(function(m){ store[C+'materialsCatalog'][m.id] = {name:m.name, price:m.price}; });
+
+    store[CA+'tickets'] = {
+      a1:{date:'2026-08-06', customer:'Astra vending s.r.o.', taskType:'Servisná obhliadka automatov', hours:2.5, priceNoVat:87.5},
+      a2:{date:'2026-08-19', customer:'Astra vending s.r.o.', taskType:'Výmena filtra', hours:1, priceNoVat:35}
+    };
+    store[CA+'mileage'] = {
+      am1:{date:'2025-11-06', km:60, route:'Vráble - Nitra'}
+    };
+    store[CA+'priceList'] = {};
+    store[CA+'materialsCatalog'] = {};
+    store[CA+'settings'] = { main: { kmRate:0.3, vatRate:0.2, hourlyRate:35, dopravaWeight:0 } };
+
+    store[CW+'tickets'] = {
+      w1:{date:'2026-08-10', machine:'Kávovar Fusion Alpha', machineNum:'FA-118', priceNoVat:45},
+      w2:{date:'2026-08-22', machine:'Kávovar Fusion Beta', machineNum:'FB-072', priceNoVat:60}
+    };
+    store[CW+'priceList'] = {};
+    store[CW+'materialsCatalog'] = {};
+    store[CW+'settings'] = { main: { kmRate:0.58, vatRate:0.2 } };
+
+    store[CO2+'tickets'] = {
+      o1:{date:'2026-08-05', task:'Servisná obhliadka', hours:1.5},
+      o2:{date:'2026-08-21', task:'Výmena hlavy a nastavenie', hours:2}
+    };
+    store[CO2+'materialsUsage'] = {};
+    store[CO2+'mileage'] = {};
+    store[CO2+'priceList'] = {};
+    store[CO2+'materialsCatalog'] = {};
+    store[CO2+'settings'] = { main: { kmRate:0.58, vatRate:0.2, showMileageSum:false } };
+    DEFAULT_MATERIALS.forEach(function(m){ store[CO2+'materialsCatalog'][m.id] = {name:m.name, price:m.price}; });
+
+    // Kniha jázd — koreňová kolekcia (nie je viazaná na konkrétnu firmu) a per-firemné súhrny za
+    // január–september 2026 sa dopĺňajú rovnako ako v ostrej appke, cez seedLogbookIfEmpty()
+    // (pozri nižšie) — v náhľade teda dostaneme presne tie isté dáta ako Roman uvidí naostro.
+
+    store[COT+'tickets'] = {
+      x1:{date:'2026-08-12', task:'Konzultácia', priceNoVat:40},
+      x2:{date:'2026-08-27', task:'Drobná oprava', priceNoVat:25}
+    };
+    store[COT+'materialsUsage'] = {};
+    store[COT+'mileage'] = {};
+    store[COT+'priceList'] = {};
+    store[COT+'materialsCatalog'] = {};
+    store[COT+'settings'] = { main: { kmRate:0.58, vatRate:0.2 } };
+
+    var collListeners = [], docListeners = [];
+    function fireAll(){
+      collListeners.forEach(function(l){ l.q.get().then(l.cb); });
+      docListeners.forEach(function(l){
+        var d = (store[l.name]||{})[l.id];
+        l.cb({ exists: !!d, data:function(){ return d; } });
+      });
+    }
+    function makeQuery(name, limitN){
+      return {
+        orderBy: function(){ return this; },
+        limit: function(n){ limitN = n; return this; },
+        get: function(){
+          var ids = Object.keys(store[name]||{});
+          if(limitN) ids = ids.slice(0, limitN);
+          var docs = ids.map(function(id){ return { id:id, exists:true, data:function(){ return store[name][id]; } }; });
+          return Promise.resolve({ empty: docs.length===0, docs: docs });
+        },
+        onSnapshot: function(cb, errCb){ collListeners.push({ q:this, cb:cb }); this.get().then(cb); return function(){}; }
+      };
+    }
+    function docRef(name, id){
+      if(!id){ id = 'auto_' + Math.random().toString(36).slice(2,10); }
+      return {
+        id: id,
+        get: function(){ var d=(store[name]||{})[id]; return Promise.resolve({exists:!!d, data:function(){return d;}}); },
+        set: function(data){ store[name]=store[name]||{}; store[name][id]=data; fireAll(); return Promise.resolve(); },
+        update: function(patch){ store[name]=store[name]||{}; store[name][id]=Object.assign({}, store[name][id]||{}, patch); fireAll(); return Promise.resolve(); },
+        delete: function(){ if(store[name]) delete store[name][id]; fireAll(); return Promise.resolve(); },
+        onSnapshot: function(cb, errCb){ docListeners.push({name:name,id:id,cb:cb}); var d=(store[name]||{})[id]; cb({exists:!!d, data:function(){return d;}}); return function(){}; }
+      };
+    }
+    function collectionRef(name){
+      var q = makeQuery(name);
+      q.doc = function(id){ return docRef(name, id); };
+      q.add = function(data){ var ref = docRef(name); ref.set(data); return Promise.resolve(ref); };
+      return q;
+    }
+    return {
+      collection: function(name){ return collectionRef(name); },
+      doc: function(path){ var p=path.split('/'); var id=p.pop(); return docRef(p.join('/'), id); },
+      batch: function(){
+        var ops = [];
+        return {
+          set: function(ref, data){ ops.push(function(){ ref.set(data); }); },
+          commit: function(){ ops.forEach(function(fn){ fn(); }); return Promise.resolve(); }
+        };
+      }
+    };
+  }
+
+  function wireLogin(){
+    document.getElementById('loginForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var email = document.getElementById('loginEmail').value.trim();
+      var pass = document.getElementById('loginPass').value;
+      var btn = document.getElementById('loginBtn');
+      var err = document.getElementById('loginError');
+      err.classList.remove('show');
+      btn.disabled = true; btn.textContent = 'Prihlasujem…';
+      auth.signInWithEmailAndPassword(email, pass).catch(function(e2){
+        err.textContent = e2.code === 'auth/invalid-credential' || e2.code === 'auth/wrong-password' || e2.code==='auth/user-not-found'
+          ? 'Nesprávny e-mail alebo heslo.' : ('Prihlásenie zlyhalo: ' + e2.message);
+        err.classList.add('show');
+      }).finally(function(){ btn.disabled=false; btn.textContent='Prihlásiť sa'; });
+    });
+    document.getElementById('signOutBtn').addEventListener('click', function(){
+      if(auth) auth.signOut();
+    });
+  }
+
+  // ---------------- DB bootstrap ----------------
+  function initDb(){
+      var db = firestore;
+      state.db = db;
+      document.getElementById('statusEl').className='status ok';
+      document.getElementById('statusText').textContent='pripojené';
+
+      // Poradie firiem sa NErobí cez Firestore orderBy (firmy vytvorené pred zavedením poľa
+      // "order" by tak vypadli zo zoznamu) — zoradí sa to tu, podľa poľa order (ak chýba, podľa
+      // createdAt), takže "Presunúť firmu hore/dole" v menu funguje pre všetky firmy rovnako.
+      db.collection('companies').limit(50).onSnapshot(function(snap){
+        state.companies = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        if(state.companies.length===0){
+          db.collection('companies').add({name:'Orech', createdAt:Date.now(), order:0});
+          return;
+        }
+        state.companies.sort(function(a,b){
+          var oa = a.order!=null ? a.order : (a.createdAt||0);
+          var ob = b.order!=null ? b.order : (b.createdAt||0);
+          return oa-ob;
+        });
+        if(!state.companyId || !state.companies.some(function(c){ return c.id===state.companyId; })){
+          state.companyId = state.companies[0].id;
+          lsSet('fs_company', state.companyId);
+        }
+        renderCompanySidebar();
+        if(state.viewAll || state.viewLogbook){
+          subscribeAllCompanies();
+        } else if(state._activeCompanyId !== state.companyId){
+          state._activeCompanyId = state.companyId;
+          subscribeCompany(state.companyId);
+        }
+      }, function(){ showDbWarn(); });
+  }
+
+  // Prepne appku na dáta vybranej firmy — odhlási staré listenery a založí nové, scoped na companies/{id}/...
+  function subscribeCompany(companyId){
+    state._unsubs.forEach(function(fn){ try{ fn(); }catch(e){} });
+    state._unsubs = [];
+    state._allUnsubs.forEach(function(fn){ try{ fn(); }catch(e){} });
+    state._allUnsubs = [];
+    state.tickets=[]; state.materials=[]; state.mileage=[]; state.priceList=[]; state.catalog=[]; state.expandedTickets={};
+    applyCompanyUI();
+
+    state._unsubs.push(companyColl('tickets').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+      state.tickets = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      renderAll();
+    }, function(){ }));
+
+    state._unsubs.push(companyColl('materialsUsage').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+      state.materials = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      renderAll();
+    }, function(){ }));
+
+    state._unsubs.push(companyColl('mileage').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+      state.mileage = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      renderAll();
+    }, function(){ }));
+
+    state._unsubs.push(companyColl('priceList').onSnapshot(function(snap){
+      state.priceList = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }).sort(function(a,b){ return (a.price||0)-(b.price||0); });
+      renderTicketsTable();
+    }, function(){ }));
+
+    state._unsubs.push(companyColl('materialsCatalog').onSnapshot(function(snap){
+      state.catalog = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }).sort(function(a,b){ return a.name<b.name?-1:1; });
+      renderMaterialsTable();
+      renderTicketsTable();
+    }, function(){ }));
+
+    state._unsubs.push(companyDoc('settings/main').onSnapshot(function(snap){
+      state.settings = Object.assign({kmRate:0.58,vatRate:0.2,hourlyRate:35,servisWeight:1,materialWeight:1,dopravaWeight:1}, snap.exists ? snap.data() : {});
+      renderPrehlad();
+      syncSettingsInputs();
+    }, function(){ showDbWarn(); }));
+
+    seedDefaultsIfEmpty();
+  }
+
+  // Súhrnný pohľad "Všetky firmy" — odhlási per-firemné listenery a založí po jednom
+  // sete listenerov (zákazky/materiál/km/nastavenia) pre KAŽDÚ firmu naraz, aby sa dal
+  // spočítať spoločný príjem naprieč všetkými firmami bez prepínania.
+  function subscribeAllCompanies(){
+    state._unsubs.forEach(function(fn){ try{ fn(); }catch(e){} });
+    state._unsubs = [];
+    state._allUnsubs.forEach(function(fn){ try{ fn(); }catch(e){} });
+    state._allUnsubs = [];
+    state.allData = {};
+    state.logbook = {};
+    updateViewMode();
+    // Kniha jázd: stavy tachometra sú spoločné pre celú appku (nie per-firma), preto je to
+    // vlastná kolekcia priamo v koreni databázy, nie pod companies/{id}/... Bez orderBy —
+    // rovnaký dôvod ako pri poradí firiem — zoradí sa podľa kľúča mesiaca priamo v JS.
+    state._allUnsubs.push(state.db.collection('logbook').limit(500).onSnapshot(function(snap){
+      var map = {};
+      snap.docs.forEach(function(d){ map[d.id] = Object.assign({id:d.id}, d.data()); });
+      state.logbook = map;
+      renderAll();
+    }, function(){}));
+    seedLogbookIfEmpty();
+    state.companies.forEach(function(c){
+      var cid = c.id;
+      state.allData[cid] = { name: c.name, mode: normalizeTicketMode(c.ticketMode), tickets: [], materials: [], mileage: [], settings: {kmRate:0.58, vatRate:0.2, hourlyRate:35, servisWeight:1, materialWeight:1, dopravaWeight:1} };
+      state._allUnsubs.push(state.db.collection('companies/'+cid+'/tickets').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+        state.allData[cid].tickets = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        renderAll();
+      }, function(){}));
+      state._allUnsubs.push(state.db.collection('companies/'+cid+'/materialsUsage').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+        state.allData[cid].materials = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        renderAll();
+      }, function(){}));
+      state._allUnsubs.push(state.db.collection('companies/'+cid+'/mileage').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+        state.allData[cid].mileage = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        renderAll();
+      }, function(){}));
+      state._allUnsubs.push(state.db.doc('companies/'+cid+'/settings/main').onSnapshot(function(snap){
+        state.allData[cid].settings = Object.assign({kmRate:0.58,vatRate:0.2,hourlyRate:35,servisWeight:1,materialWeight:1,dopravaWeight:1}, snap.exists?snap.data():{});
+        renderAll();
+      }, function(){}));
+    });
+    renderAll();
+  }
+
+  function showDbWarn(){
+    document.getElementById('dbWarn').classList.add('show');
+    document.getElementById('statusEl').className='status off';
+    document.getElementById('statusText').textContent='bez pripojenia';
+  }
+
+  // Prvé spustenie danej firmy: ak je jej cenník/katalóg/nastavenia prázdne, naplní ich predvolenými hodnotami.
+  function seedDefaultsIfEmpty(){
+    var mode = currentCompany().ticketMode;
+    if(mode==='tariff'){
+      companyColl('priceList').limit(1).get().then(function(snap){
+        if(snap.empty){
+          var batch = state.db.batch();
+          DEFAULT_PRICE_LIST.forEach(function(p){ batch.set(companyColl('priceList').doc(p.id), {label:p.label, price:p.price}); });
+          batch.commit();
+        }
+      });
+    }
+    if(currentCompany().showMaterials){
+      companyColl('materialsCatalog').limit(1).get().then(function(snap){
+        if(snap.empty){
+          var batch = state.db.batch();
+          DEFAULT_MATERIALS.forEach(function(m){ batch.set(companyColl('materialsCatalog').doc(m.id), {name:m.name, price:m.price}); });
+          batch.commit();
+        }
+      });
+    }
+    companyDoc('settings/main').get().then(function(snap){
+      if(!snap.exists){ companyDoc('settings/main').set({kmRate:0.58, vatRate:0.2, hourlyRate:35}); }
+    });
+  }
+
+  // Reálne čísla, ktoré poslal Roman (odpočty tachometra + rozpis km po firmách za
+  // január–september 2026, s decembrom 2025 ako počiatočným stavom). Používa sa len na
+  // JEDNORAZOVÝ import cez seedLogbookIfEmpty() nižšie — pozri jej komentár.
+  var LOGBOOK_SEED_2026 = {
+    readings: [
+      { month:'2025-12', odometer:340900 },
+      { month:'2026-01', odometer:345200 },
+      { month:'2026-02', odometer:348400 },
+      { month:'2026-03', odometer:351500 },
+      { month:'2026-04', odometer:354700 },
+      { month:'2026-05', odometer:358450 },
+      { month:'2026-06', odometer:362704 },
+      { month:'2026-07', odometer:367189 },
+      { month:'2026-08', odometer:370000 },
+      { month:'2026-09', odometer:370835 }
+    ],
+    months: [
+      { month:'2026-01', nestle:3670, hlohin:230, orech:530 },
+      { month:'2026-02', nestle:2390, hlohin:120, orech:690 },
+      { month:'2026-03', nestle:2460, hlohin:220, orech:530 },
+      { month:'2026-04', nestle:1985, hlohin:170, orech:500 },
+      { month:'2026-05', nestle:3480, hlohin:0,   orech:200 },
+      { month:'2026-06', nestle:3235, hlohin:270, orech:430 },
+      { month:'2026-07', nestle:3735, hlohin:80,  orech:670 },
+      { month:'2026-08', nestle:2053, hlohin:310, orech:470 },
+      { month:'2026-09', nestle:550,  hlohin:370, orech:5   }
+    ]
+  };
+
+  // Nájde ID firmy podľa jej názvu (case-insensitive) — potrebné pre seedLogbookIfEmpty, lebo
+  // v ostrej appke má každá firma náhodné ID z Firestore (na rozdiel od pevných ID v náhľade).
+  function findCompanyIdByName(name){
+    var n = (name||'').trim().toLowerCase();
+    var found = (state.companies||[]).filter(function(c){ return (c.name||'').trim().toLowerCase()===n; })[0];
+    return found ? found.id : null;
+  }
+
+  // Jednorazový import Knihy jázd: ak je koreňová kolekcia "logbook" prázdna (t.j. Roman ju
+  // ešte v tejto appke vôbec nepoužil), naplní ju jeho reálnymi číslami za január–september 2026
+  // (viď LOGBOOK_SEED_2026) a zároveň dopíše zodpovedajúce súhrnné km záznamy do Kilometrovného
+  // jednotlivých firiem (Nestlé/Astra vending/Orech), aby si Kniha jázd vedela sama dopočítať
+  // firemné km. Vďaka kontrole "je kolekcia prázdna?" sa toto spustí naozaj len raz — pri
+  // ďalších otvoreniach appky (aj po tejto zmene) sa už nič neprepíše ani neduplikuje.
+  function seedLogbookIfEmpty(){
+    if(state._logbookSeedTried) return;
+    state._logbookSeedTried = true;
+    var db = state.db;
+    db.collection('logbook').limit(1).get().then(function(snap){
+      if(!snap.empty) return;
+      var ids = {
+        nestle: findCompanyIdByName('Nestlé'),
+        hlohin: findCompanyIdByName('Astra vending'),
+        orech: findCompanyIdByName('Orech')
+      };
+      var idKeys = ['nestle','hlohin','orech'].filter(function(k){ return ids[k]; });
+      // Pred zápisom zistíme, ktoré mesiace už majú v Kilometrovnom danej firmy nejaký záznam —
+      // tam sa súhrnný import NEPRIDÁ, aby sa km nezdvojili s tým, čo tam Roman prípadne už má
+      // zapísané ručne (a aby sa nezdvojila ani Doprava/príjem danej firmy za ten mesiac).
+      // Import tak dopĺňa len tie firmo-mesiace, ktoré sú úplne prázdne.
+      Promise.all(idKeys.map(function(k){
+        return db.collection('companies/'+ids[k]+'/mileage').limit(1000).get().then(function(s){
+          var months = {};
+          s.docs.forEach(function(d){ months[monthKeyOf((d.data()||{}).date)] = true; });
+          return months;
+        });
+      })).then(function(monthsByKey){
+        var existing = {};
+        idKeys.forEach(function(k,i){ existing[k] = monthsByKey[i]; });
+        var batch = db.batch();
+        LOGBOOK_SEED_2026.readings.forEach(function(r){
+          batch.set(db.doc('logbook/'+r.month), { odometer: r.odometer });
+        });
+        LOGBOOK_SEED_2026.months.forEach(function(m){
+          ['nestle','hlohin','orech'].forEach(function(k){
+            var cid = ids[k], km = m[k];
+            if(!cid || !km) return;
+            if(existing[k] && existing[k][m.month]) return;
+            var ref = db.collection('companies/'+cid+'/mileage').doc('kniha-jazd-'+m.month);
+            batch.set(ref, { date: m.month+'-15', km: km, route: 'Súhrn za mesiac (importované z knihy jázd)' });
+          });
+        });
+        batch.commit();
+      });
+    }).catch(function(){});
+  }
+
+  // ---------------- company sidebar ----------------
+  var EDIT_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5a1.4 1.4 0 0 1 2 2L6 15l-3 1 1-3Z"/></svg>';
+  var CHEVRON_UP = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5-5 5 5"/></svg>';
+  var CHEVRON_DOWN = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"/></svg>';
+
+  function renderCompanySidebar(){
+    var el = document.getElementById('companyList');
+    el.innerHTML = state.companies.map(function(c,i){
+      var active = !state.viewAll && !state.viewLogbook && c.id===state.companyId;
+      var isFirst = i===0, isLast = i===state.companies.length-1;
+      return '<div class="company-item c'+((i%4)+1)+(active?' active':'')+'" data-id="'+c.id+'">'+
+        '<button type="button" class="company-select" data-id="'+c.id+'">'+
+          '<span class="company-avatar">'+esc((c.name||'?').trim().slice(0,1).toUpperCase())+'</span>'+
+          '<span class="company-name">'+esc(c.name)+'</span>'+
+        '</button>'+
+        '<span class="company-reorder">'+
+          '<button type="button" class="company-move-btn'+(isFirst?' disabled':'')+'" data-id="'+c.id+'" data-dir="-1" title="Posunúť vyššie" aria-label="Posunúť vyššie">'+CHEVRON_UP+'</button>'+
+          '<button type="button" class="company-move-btn'+(isLast?' disabled':'')+'" data-id="'+c.id+'" data-dir="1" title="Posunúť nižšie" aria-label="Posunúť nižšie">'+CHEVRON_DOWN+'</button>'+
+        '</span>'+
+        '<button type="button" class="company-edit-btn" data-id="'+c.id+'" title="Premenovať firmu" aria-label="Premenovať firmu">'+EDIT_ICON+'</button>'+
+      '</div>';
+    }).join('');
+    el.querySelectorAll('.company-select').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.dataset.id;
+        if(!state.viewAll && !state.viewLogbook && id===state.companyId) return;
+        state.viewAll = false; lsSet('fs_viewall','0');
+        state.viewLogbook = false; lsSet('fs_viewlogbook','0');
+        state.companyId = id; lsSet('fs_company', id);
+        renderCompanySidebar();
+        state._activeCompanyId = id;
+        subscribeCompany(id);
+      });
+    });
+    el.querySelectorAll('.company-edit-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var id = btn.dataset.id;
+        var c = state.companies.filter(function(x){ return x.id===id; })[0];
+        startRenameCompany(btn.closest('.company-item'), id, c?c.name:'');
+      });
+    });
+    el.querySelectorAll('.company-move-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        if(btn.classList.contains('disabled')) return;
+        moveCompany(btn.dataset.id, parseInt(btn.dataset.dir,10));
+      });
+    });
+    document.getElementById('allCompaniesBtn').classList.toggle('active', state.viewAll);
+    var lbBtn0 = document.getElementById('logbookBtn');
+    if(lbBtn0) lbBtn0.classList.toggle('active', state.viewLogbook);
+  }
+
+  // Presunie firmu o jedno miesto hore/dole v ľavom menu — prepíše poradie ("order")
+  // všetkých firiem naraz, aby zostalo bez medzier a konzistentné.
+  function moveCompany(id, dir){
+    if(!state.db) return;
+    var list = state.companies.slice();
+    var idx = list.findIndex(function(c){ return c.id===id; });
+    var swapIdx = idx+dir;
+    if(idx<0 || swapIdx<0 || swapIdx>=list.length) return;
+    var tmp = list[idx]; list[idx] = list[swapIdx]; list[swapIdx] = tmp;
+    var batch = state.db.batch();
+    list.forEach(function(c,i){
+      var payload = Object.assign({}, c, {order:i});
+      delete payload.id;
+      batch.set(state.db.doc('companies/'+c.id), payload);
+    });
+    batch.commit();
+  }
+
+  // Premenovanie firmy priamo v appke (bez zásahu do Firebase konzoly) — nahradí obsah
+  // riadku vo Firmách inline formulárom s poľom na nový názov.
+  function startRenameCompany(itemEl, id, currentName){
+    itemEl.innerHTML =
+      '<form class="company-rename-form">'+
+        '<input type="text" class="company-rename-input" value="'+esc(currentName)+'" autocomplete="off">'+
+        '<button type="submit" class="company-rename-ok" title="Uložiť">✓</button>'+
+        '<button type="button" class="company-rename-cancel" title="Zrušiť">✕</button>'+
+      '</form>';
+    var input = itemEl.querySelector('.company-rename-input');
+    input.focus(); input.select();
+    itemEl.querySelector('.company-rename-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var val = input.value.trim();
+      if(val && state.db){ state.db.doc('companies/'+id).update({name: val}); }
+      renderCompanySidebar();
+    });
+    itemEl.querySelector('.company-rename-cancel').addEventListener('click', function(){ renderCompanySidebar(); });
+  }
+  function wireAllCompaniesBtn(){
+    document.getElementById('allCompaniesBtn').addEventListener('click', function(){
+      if(state.viewAll) return;
+      state.viewAll = true; lsSet('fs_viewall','1');
+      state.viewLogbook = false; lsSet('fs_viewlogbook','0');
+      state._activeCompanyId = null;
+      renderCompanySidebar();
+      subscribeAllCompanies();
+    });
+  }
+  function wireLogbookBtn(){
+    document.getElementById('logbookBtn').addEventListener('click', function(){
+      if(state.viewLogbook) return;
+      state.viewLogbook = true; lsSet('fs_viewlogbook','1');
+      state.viewAll = false; lsSet('fs_viewall','0');
+      state._activeCompanyId = null;
+      renderCompanySidebar();
+      subscribeAllCompanies();
+    });
+  }
+  function wireAddCompany(){
+    var btn = document.getElementById('addCompanyBtn');
+    var form = document.getElementById('addCompanyForm');
+    var input = document.getElementById('addCompanyInput');
+    var modeSel = document.getElementById('addCompanyMode');
+    var materialsChk = document.getElementById('addCompanyMaterials');
+    var mileageChk = document.getElementById('addCompanyMileage');
+    btn.addEventListener('click', function(){ form.hidden=false; btn.hidden=true; input.value=''; modeSel.value='tariff'; materialsChk.checked=true; mileageChk.checked=true; input.focus(); });
+    document.getElementById('cancelAddCompany').addEventListener('click', function(){ form.hidden=true; btn.hidden=false; });
+    modeSel.addEventListener('change', function(){
+      if(modeSel.value==='hourly'){ materialsChk.checked=false; mileageChk.checked=true; }
+      else if(modeSel.value==='manual'||modeSel.value==='task'){ materialsChk.checked=false; mileageChk.checked=false; }
+      else { materialsChk.checked=true; mileageChk.checked=true; }
+    });
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var name = input.value.trim();
+      if(!name || !state.db) return;
+      state.db.collection('companies').add({
+        name:name, createdAt:Date.now(), order: state.companies.length,
+        ticketMode: modeSel.value, showMaterials: materialsChk.checked, showMileage: mileageChk.checked
+      }).then(function(ref){
+        state.viewAll = false; lsSet('fs_viewall','0');
+        state.viewLogbook = false; lsSet('fs_viewlogbook','0');
+        state.companyId = ref.id; lsSet('fs_company', ref.id);
+        state._activeCompanyId = ref.id;
+        renderCompanySidebar();
+        subscribeCompany(ref.id);
+      });
+      form.hidden=true; btn.hidden=false;
+    });
+  }
+
+  // ---------------- tabs & month ----------------
+  function setupTabs(){
+    var btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        state.activeTab = b.dataset.tab; lsSet('fs_tab', state.activeTab);
+        btns.forEach(function(x){ x.classList.toggle('active', x===b); });
+        document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id==='panel-'+state.activeTab); });
+        if(state.activeTab==='prehlad'){ renderPrehlad(); }
+      });
+      b.classList.toggle('active', b.dataset.tab===state.activeTab);
+    });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id==='panel-'+state.activeTab); });
+  }
+
+  function allMonthKeys(){
+    var set = {};
+    if(state.viewAll){
+      Object.keys(state.allData).forEach(function(cid){
+        var d = state.allData[cid];
+        d.tickets.concat(d.materials).concat(d.mileage).forEach(function(r){ if(r.date) set[monthKeyOf(r.date)]=true; });
+      });
+    } else {
+      state.tickets.concat(state.materials).concat(state.mileage).forEach(function(r){ if(r.date) set[monthKeyOf(r.date)]=true; });
+    }
+    set[monthKeyNow()] = true;
+    return Object.keys(set).sort().reverse();
+  }
+  function renderMonthOptions(){
+    var sel = document.getElementById('monthSelect');
+    var keys = allMonthKeys();
+    if(keys.indexOf(state.month)===-1 && state.month!=='all') keys.unshift(state.month);
+    var html = '<option value="all">Všetky mesiace</option>';
+    keys.forEach(function(k){ html += '<option value="'+k+'"'+(k===state.month?' selected':'')+'>'+monthLabel(k)+'</option>'; });
+    sel.innerHTML = html;
+    sel.value = state.month;
+  }
+
+  // ---------------- helpers on data ----------------
+  function filterMonth(arr){
+    if(state.month==='all') return arr;
+    return arr.filter(function(r){ return monthKeyOf(r.date)===state.month; });
+  }
+  function materialTotal(m){ return (parseFloat(m.qty)||0) * (parseFloat(m.unitPrice)||0); }
+
+  // ---------------- TICKETS table ----------------
+  function priceListOptionsHtml(selectedKey){
+    var html = '<option value="custom"'+(selectedKey==='custom'?' selected':'')+'>Vlastná cena…</option>';
+    state.priceList.forEach(function(p){
+      html += '<option value="'+p.id+'"'+(selectedKey===p.id?' selected':'')+'>'+esc(p.label)+' — '+fmtEUR(p.price)+'</option>';
+    });
+    return html;
+  }
+  var DEL_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6M6 6l.6 9.4A1.5 1.5 0 0 0 8.1 17h3.8a1.5 1.5 0 0 0 1.5-1.6L14 6"/></svg>';
+
+  function renderTicketsTable(){
+    var mode = currentCompany().ticketMode;
+    // Karta "Nepriradený materiál" patrí len k tarifným zákazkám — v iných režimoch sa
+    // nemá ukazovať (inak by po prepnutí firmy chvíľu zobrazovala starý obsah predošlej firmy).
+    if(mode!=='tariff'){
+      var uc0 = document.getElementById('unassignedMaterialsCard');
+      if(uc0) uc0.hidden = true;
+    }
+    if(mode==='hourly'){ renderTicketsTableHourly(); }
+    else if(mode==='manual'){ renderTicketsTableManual(); }
+    else if(mode==='simple'){ renderTicketsTableSimple(); }
+    else if(mode==='hours'){ renderTicketsTableHours(); }
+    else if(mode==='task'){ renderTicketsTableTask(); }
+    else { renderTicketsTableTariff(); }
+  }
+
+  // Materiál naviazaný na konkrétnu zákazku (pole ticketId na dokumente materialsUsage).
+  function materialsForTicket(ticketId){
+    return state.materials.filter(function(m){ return m.ticketId===ticketId; });
+  }
+  function renderMaterialInlineTable(matRows){
+    if(!matRows.length){
+      return '<div class="material-inline-empty">Zatiaľ žiadny materiál k tejto zákazke.</div>';
+    }
+    var body = matRows.map(function(m){
+      return '<tr data-id="'+m.id+'">' +
+        '<td><select data-field="itemKey">'+catalogOptionsHtml(m.itemKey||'custom')+'</select>' +
+          (m.itemKey==='custom' || !m.itemKey ? '<input type="text" value="'+esc(m.itemName||'')+'" data-field="itemName" placeholder="Názov položky" style="margin-top:2px">' : '') +
+        '</td>' +
+        '<td><input type="number" step="1" value="'+(m.qty!=null?m.qty:1)+'" data-field="qty"></td>' +
+        '<td><input type="number" step="0.01" value="'+(m.unitPrice!=null?m.unitPrice:0)+'" data-field="unitPrice"></td>' +
+        '<td class="readonly-price">'+fmtEUR(materialTotal(m))+'</td>' +
+        '<td><input type="text" value="'+esc(m.note||'')+'" data-field="note" placeholder="—"></td>' +
+        '<td><button type="button" class="row-del" data-del="materialsUsage">'+DEL_ICON+'</button></td>' +
+      '</tr>';
+    }).join('');
+    return '<table class="material-inline"><thead><tr>'+
+      '<th>Položka</th><th>Počet ks</th><th>Cena/ks</th><th>Spolu</th><th>Poznámka</th><th></th>'+
+      '</tr></thead><tbody>'+body+'</tbody></table>';
+  }
+  // Zaviaže vstupy a mazacie tlačidlá vo vnorených riadkoch materiálu (companyDoc('materialsUsage/…')),
+  // tlačidlá na rozbalenie/zbalenie riadku zákazky a tlačidlo "Pridať materiál" v rozbalenom riadku.
+  function wireTicketMaterialInline(body){
+    body.querySelectorAll('.material-subrow').forEach(function(sub){
+      sub.querySelectorAll('tr[data-id] [data-field]').forEach(function(el){
+        el.addEventListener('change', function(){
+          var tr = el.closest('tr'); var id = tr.dataset.id;
+          var field = el.dataset.field;
+          var patch = {};
+          if(field==='qty'){ patch.qty = parseFloat(el.value)||0; }
+          else if(field==='unitPrice'){ patch.unitPrice = parseFloat(el.value)||0; }
+          else if(field==='itemKey'){
+            patch.itemKey = el.value;
+            if(el.value!=='custom'){
+              var c = state.catalog.filter(function(x){return x.id===el.value;})[0];
+              if(c){ patch.unitPrice = c.price; patch.itemName = c.name; }
+            }
+          } else { patch[field] = el.value; }
+          markBusy(1);
+          companyDoc('materialsUsage/'+id).update(patch).then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+        });
+      });
+      sub.querySelectorAll('tr[data-id] [data-del="materialsUsage"]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var tr = btn.closest('tr'); var id = tr.dataset.id;
+          if(!state.db) return;
+          markBusy(1);
+          companyDoc('materialsUsage/'+id).delete().then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+        });
+      });
+    });
+    body.querySelectorAll('[data-toggle-ticket]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.dataset.toggleTicket;
+        state.expandedTickets[id] = !state.expandedTickets[id];
+        renderTicketsTable();
+      });
+    });
+    body.querySelectorAll('[data-add-material]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var ticketId = btn.dataset.addMaterial;
+        if(!state.db) return;
+        var t = state.tickets.filter(function(x){ return x.id===ticketId; })[0];
+        var d = t ? t.date : todayISO();
+        state.expandedTickets[ticketId] = true;
+        markBusy(1);
+        companyColl('materialsUsage').add({ date: d, itemKey:'custom', itemName:'', qty:1, unitPrice:0, note:'', ticketId: ticketId, createdAt: Date.now() }).then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+  }
+  // Materiál, ktorý (napr. zo staršej verzie appky) ešte nemá priradenú zákazku — malá záchranná
+  // sekcia pod tabuľkou zákaziek, kde sa dá dodatočne priradiť, nech sa nič nestratí z dohľadu.
+  function renderUnassignedMaterials(rows){
+    var card = document.getElementById('unassignedMaterialsCard');
+    if(!card) return;
+    var validIds = {}; rows.forEach(function(t){ validIds[t.id]=true; });
+    var orphans = filterMonth(state.materials).filter(function(m){ return !m.ticketId || !validIds[m.ticketId]; });
+    if(!orphans.length){ card.hidden = true; return; }
+    card.hidden = false;
+    var optionsFor = function(selectedId){
+      var html = '<option value="">— vyber zákazku —</option>';
+      rows.forEach(function(t){
+        var label = fmtDateSk(t.date) + (t.customer?(' — '+t.customer):'') + (t.ticketNum?(' ('+t.ticketNum+')'):'');
+        html += '<option value="'+t.id+'"'+(t.id===selectedId?' selected':'')+'>'+esc(label)+'</option>';
+      });
+      return html;
+    };
+    var body = document.getElementById('unassignedMaterialsBody');
+    body.innerHTML = orphans.map(function(m){
+      return '<tr>' +
+        '<td>'+esc(fmtDateSk(m.date))+'</td>' +
+        '<td>'+esc(m.itemName||'—')+'</td>' +
+        '<td class="num">'+fmtNum(m.qty||0)+'</td>' +
+        '<td class="num">'+fmtEUR(m.unitPrice||0)+'</td>' +
+        '<td class="readonly-price">'+fmtEUR(materialTotal(m))+'</td>' +
+        '<td><select class="unassigned-select" data-mid="'+m.id+'">'+optionsFor(m.ticketId)+'</select></td>' +
+        '<td><button type="button" class="row-del" data-mid-del="'+m.id+'">'+DEL_ICON+'</button></td>' +
+      '</tr>';
+    }).join('');
+    body.querySelectorAll('.unassigned-select').forEach(function(sel){
+      sel.addEventListener('change', function(){
+        var id = sel.dataset.mid;
+        if(!sel.value) return;
+        markBusy(1);
+        companyDoc('materialsUsage/'+id).update({ticketId: sel.value}).then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+    body.querySelectorAll('[data-mid-del]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.dataset.midDel;
+        if(!state.db) return;
+        markBusy(1);
+        companyDoc('materialsUsage/'+id).delete().then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+  }
+
+  function renderTicketsTableTariff(){
+    var company = currentCompany();
+    var withMat = !!company.showMaterials;
+    document.getElementById('ticketsHeadRow').innerHTML =
+      (withMat?'<th></th>':'') +
+      '<th>Dátum</th><th>Č. tiketu</th><th>Zákazník</th><th>Typ zákazky</th>'+
+      '<th>Cena bez DPH</th><th>Cena s DPH</th>'+
+      (withMat?'<th>Materiál</th>':'') +
+      '<th>Filtre / hlavy</th><th>Poznámka</th><th></th>';
+    document.getElementById('ticketsFootRow').innerHTML = withMat ?
+      ('<td colspan="5">Spolu</td><td class="num" id="ticketsSumNoVat">–</td><td class="num" id="ticketsSumVat">–</td><td class="num" id="ticketsSumMaterial">–</td><td colspan="3"></td>') :
+      ('<td colspan="4">Spolu</td><td class="num" id="ticketsSumNoVat">–</td><td class="num" id="ticketsSumVat">–</td><td colspan="3"></td>');
+
+    var rows = filterMonth(state.tickets).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('ticketsBody');
+    document.getElementById('cnt-tickets').textContent = rows.length ? rows.length : '';
+    var colCount = withMat ? 11 : 9;
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="'+colCount+'">Zatiaľ žiadne zákazky'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať zákazku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(t){
+        var priceVat = (parseFloat(t.priceNoVat)||0) * (1+(state.settings.vatRate||0));
+        var matRows = withMat ? materialsForTicket(t.id) : [];
+        var matSum = matRows.reduce(function(s,m){ return s+materialTotal(m); },0);
+        var isOpen = !!state.expandedTickets[t.id];
+        var tr = '<tr data-id="'+t.id+'">' +
+          (withMat ? '<td><button type="button" class="row-toggle-btn'+(isOpen?' open':'')+'" data-toggle-ticket="'+t.id+'" title="Materiál k zákazke" aria-label="Materiál k zákazke">'+CHEVRON_DOWN+'</button></td>' : '') +
+          '<td class="date-td"><input type="date" value="'+esc(t.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(t.date))+'</span></td>' +
+          '<td><input type="text" value="'+esc(t.ticketNum||'')+'" data-field="ticketNum" placeholder="—"></td>' +
+          '<td><input type="text" value="'+esc(t.customer||'')+'" data-field="customer" placeholder="Zákazník"></td>' +
+          '<td><select data-field="priceKey">'+priceListOptionsHtml(t.priceKey||'custom')+'</select>' +
+            (t.priceKey==='custom' || !t.priceKey ? '<input type="text" value="'+esc(t.serviceLabel||'')+'" data-field="serviceLabel" placeholder="Popis zákazky" style="margin-top:2px">' : '') +
+          '</td>' +
+          '<td><input type="number" step="0.01" value="'+(t.priceNoVat!=null?t.priceNoVat:0)+'" data-field="priceNoVat"></td>' +
+          '<td class="readonly-price">'+fmtEUR(priceVat)+'</td>' +
+          (withMat ? ('<td class="ticket-material-col">'+(matRows.length? (fmtEUR(matSum)+' ('+matRows.length+')') : '–')+'</td>') : '') +
+          '<td><input type="text" value="'+esc(t.filtre||'')+'" data-field="filtre" placeholder="—"></td>' +
+          '<td><input type="text" value="'+esc(t.note||'')+'" data-field="note" placeholder="—"></td>' +
+          '<td><button class="row-del" data-del="tickets">'+DEL_ICON+'</button></td>' +
+        '</tr>';
+        if(withMat && isOpen){
+          tr += '<tr class="material-subrow" data-sub-for="'+t.id+'"><td colspan="'+colCount+'" class="material-sub-cell">' +
+            '<div class="material-sub-wrap">' +
+              '<div class="material-sub-head"><span class="lbl">Materiál k tejto zákazke</span></div>' +
+              renderMaterialInlineTable(matRows) +
+              '<button type="button" class="material-inline-add" data-add-material="'+t.id+'"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať materiál</button>' +
+            '</div>' +
+          '</td></tr>';
+        }
+        return tr;
+      }).join('');
+    }
+    var sumNoVat = rows.reduce(function(s,t){ return s+(parseFloat(t.priceNoVat)||0); },0);
+    var sumVat = sumNoVat*(1+(state.settings.vatRate||0));
+    document.getElementById('ticketsSumNoVat').textContent = fmtEUR(sumNoVat);
+    document.getElementById('ticketsSumVat').textContent = fmtEUR(sumVat);
+    if(withMat){
+      var linkedIds = {}; rows.forEach(function(t){ linkedIds[t.id]=true; });
+      var sumMat = state.materials.filter(function(m){ return linkedIds[m.ticketId]; }).reduce(function(s,m){ return s+materialTotal(m); },0);
+      var sumMatEl = document.getElementById('ticketsSumMaterial');
+      if(sumMatEl) sumMatEl.textContent = fmtEUR(sumMat);
+    }
+    document.getElementById('ticketsHint').textContent = 'Zákazky za ' + (state.month==='all'?'všetky mesiace':monthLabel(state.month));
+
+    bindRow(body,'tickets', function(id,field,val){
+      var patch = {};
+      if(field==='priceNoVat'){ patch.priceNoVat = parseFloat(val)||0; }
+      else if(field==='priceKey'){
+        patch.priceKey = val;
+        if(val!=='custom'){
+          var pl = state.priceList.filter(function(p){return p.id===val;})[0];
+          if(pl){ patch.priceNoVat = pl.price; patch.serviceLabel = pl.label; }
+        }
+      } else { patch[field] = val; }
+      companyDoc('tickets/'+id).update(patch).catch(function(){});
+    });
+
+    if(withMat){
+      wireTicketMaterialInline(body);
+      renderUnassignedMaterials(rows);
+    } else {
+      var uc = document.getElementById('unassignedMaterialsCard');
+      if(uc) uc.hidden = true;
+    }
+  }
+
+  function renderTicketsTableHourly(){
+    document.getElementById('ticketsHeadRow').innerHTML =
+      '<th>Dátum</th><th>Zákazník</th><th>Typ úkonu</th><th>Počet hodín</th>'+
+      '<th>Cena bez DPH</th><th></th>';
+    document.getElementById('ticketsFootRow').innerHTML =
+      '<td colspan="4">Spolu</td><td class="num" id="ticketsSumNoVat">–</td><td></td>';
+
+    var rows = filterMonth(state.tickets).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('ticketsBody');
+    document.getElementById('cnt-tickets').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">Zatiaľ žiadne zákazky'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať zákazku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(t){
+        var priceNoVat = parseFloat(t.priceNoVat)||0;
+        return '<tr data-id="'+t.id+'">' +
+          '<td class="date-td"><input type="date" value="'+esc(t.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(t.date))+'</span></td>' +
+          '<td><input type="text" value="'+esc(t.customer||'')+'" data-field="customer" placeholder="Zákazník"></td>' +
+          '<td><input type="text" value="'+esc(t.taskType||'')+'" data-field="taskType" placeholder="Typ úkonu"></td>' +
+          '<td><input type="number" step="0.25" value="'+(t.hours!=null?t.hours:0)+'" data-field="hours"></td>' +
+          '<td class="readonly-price">'+fmtEUR(priceNoVat)+'</td>' +
+          '<td><button class="row-del" data-del="tickets">'+DEL_ICON+'</button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumNoVat = rows.reduce(function(s,t){ return s+(parseFloat(t.priceNoVat)||0); },0);
+    document.getElementById('ticketsSumNoVat').textContent = fmtEUR(sumNoVat);
+    document.getElementById('ticketsHint').textContent = 'Zákazky za ' + (state.month==='all'?'všetky mesiace':monthLabel(state.month));
+
+    bindRow(body,'tickets', function(id,field,val){
+      var patch = {};
+      if(field==='hours'){
+        var hours = parseFloat(val)||0;
+        patch.hours = hours;
+        patch.priceNoVat = hours * (state.settings.hourlyRate||0);
+      } else { patch[field] = val; }
+      companyDoc('tickets/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  function renderTicketsTableManual(){
+    document.getElementById('ticketsHeadRow').innerHTML =
+      '<th>Dátum</th><th>Stroj</th><th>Číslo stroja</th>'+
+      '<th>Cena za úkon</th><th></th>';
+    document.getElementById('ticketsFootRow').innerHTML =
+      '<td colspan="3">Spolu</td><td class="num" id="ticketsSumNoVat">–</td><td></td>';
+
+    var rows = filterMonth(state.tickets).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('ticketsBody');
+    document.getElementById('cnt-tickets').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Zatiaľ žiadne zákazky'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať zákazku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(t){
+        return '<tr data-id="'+t.id+'">' +
+          '<td class="date-td"><input type="date" value="'+esc(t.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(t.date))+'</span></td>' +
+          '<td><input type="text" value="'+esc(t.machine||'')+'" data-field="machine" placeholder="Stroj"></td>' +
+          '<td><input type="text" value="'+esc(t.machineNum||'')+'" data-field="machineNum" placeholder="Číslo stroja"></td>' +
+          '<td><input type="number" step="0.01" value="'+(t.priceNoVat!=null?t.priceNoVat:0)+'" data-field="priceNoVat"></td>' +
+          '<td><button class="row-del" data-del="tickets">'+DEL_ICON+'</button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumNoVat = rows.reduce(function(s,t){ return s+(parseFloat(t.priceNoVat)||0); },0);
+    document.getElementById('ticketsSumNoVat').textContent = fmtEUR(sumNoVat);
+    document.getElementById('ticketsHint').textContent = 'Zákazky za ' + (state.month==='all'?'všetky mesiace':monthLabel(state.month));
+
+    bindRow(body,'tickets', function(id,field,val){
+      var patch = {};
+      if(field==='priceNoVat'){ patch.priceNoVat = parseFloat(val)||0; }
+      else { patch[field] = val; }
+      companyDoc('tickets/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  function renderTicketsTableSimple(){
+    document.getElementById('ticketsHeadRow').innerHTML =
+      '<th>Dátum</th><th>Názov</th><th>Poznámka</th><th>Cena</th><th></th>';
+    document.getElementById('ticketsFootRow').innerHTML =
+      '<td colspan="3">Spolu</td><td class="num" id="ticketsSumNoVat">–</td><td></td>';
+
+    var rows = filterMonth(state.tickets).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('ticketsBody');
+    document.getElementById('cnt-tickets').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Zatiaľ žiadne zákazky'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať zákazku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(t){
+        return '<tr data-id="'+t.id+'">' +
+          '<td class="date-td"><input type="date" value="'+esc(t.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(t.date))+'</span></td>' +
+          '<td><input type="text" value="'+esc(t.name||'')+'" data-field="name" placeholder="Názov"></td>' +
+          '<td><input type="text" value="'+esc(t.note||'')+'" data-field="note" placeholder="—"></td>' +
+          '<td><input type="number" step="0.01" value="'+(t.priceNoVat!=null?t.priceNoVat:0)+'" data-field="priceNoVat"></td>' +
+          '<td><button class="row-del" data-del="tickets">'+DEL_ICON+'</button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumNoVat = rows.reduce(function(s,t){ return s+(parseFloat(t.priceNoVat)||0); },0);
+    document.getElementById('ticketsSumNoVat').textContent = fmtEUR(sumNoVat);
+    document.getElementById('ticketsHint').textContent = 'Zákazky za ' + (state.month==='all'?'všetky mesiace':monthLabel(state.month));
+
+    bindRow(body,'tickets', function(id,field,val){
+      var patch = {};
+      if(field==='priceNoVat'){ patch.priceNoVat = parseFloat(val)||0; }
+      else { patch[field] = val; }
+      companyDoc('tickets/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  function renderTicketsTableHours(){
+    document.getElementById('ticketsHeadRow').innerHTML =
+      '<th>Dátum</th><th>Úkon</th><th>Počet hodín</th><th></th>';
+    document.getElementById('ticketsFootRow').innerHTML =
+      '<td colspan="2">Spolu</td><td class="num" id="ticketsSumHours">–</td><td></td>';
+
+    var rows = filterMonth(state.tickets).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('ticketsBody');
+    document.getElementById('cnt-tickets').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="4">Zatiaľ žiadne zákazky'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať zákazku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(t){
+        return '<tr data-id="'+t.id+'">' +
+          '<td class="date-td"><input type="date" value="'+esc(t.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(t.date))+'</span></td>' +
+          '<td><input type="text" value="'+esc(t.task||'')+'" data-field="task" placeholder="Úkon"></td>' +
+          '<td><input type="number" step="0.25" value="'+(t.hours!=null?t.hours:0)+'" data-field="hours"></td>' +
+          '<td><button class="row-del" data-del="tickets">'+DEL_ICON+'</button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumHours = rows.reduce(function(s,t){ return s+(parseFloat(t.hours)||0); },0);
+    document.getElementById('ticketsSumHours').textContent = fmtNum(sumHours,2)+' h';
+    document.getElementById('ticketsHint').textContent = 'Zákazky za ' + (state.month==='all'?'všetky mesiace':monthLabel(state.month));
+
+    bindRow(body,'tickets', function(id,field,val){
+      var patch = {};
+      if(field==='hours'){ patch.hours = parseFloat(val)||0; }
+      else { patch[field] = val; }
+      companyDoc('tickets/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  function renderTicketsTableTask(){
+    document.getElementById('ticketsHeadRow').innerHTML =
+      '<th>Dátum</th><th>Úkon</th><th>Cena bez DPH</th><th></th>';
+    document.getElementById('ticketsFootRow').innerHTML =
+      '<td colspan="2">Spolu</td><td class="num" id="ticketsSumNoVat">–</td><td></td>';
+
+    var rows = filterMonth(state.tickets).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('ticketsBody');
+    document.getElementById('cnt-tickets').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="4">Zatiaľ žiadne zákazky'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať zákazku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(t){
+        return '<tr data-id="'+t.id+'">' +
+          '<td class="date-td"><input type="date" value="'+esc(t.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(t.date))+'</span></td>' +
+          '<td><input type="text" value="'+esc(t.task||'')+'" data-field="task" placeholder="Úkon"></td>' +
+          '<td><input type="number" step="0.01" value="'+(t.priceNoVat!=null?t.priceNoVat:0)+'" data-field="priceNoVat"></td>' +
+          '<td><button class="row-del" data-del="tickets">'+DEL_ICON+'</button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumNoVat = rows.reduce(function(s,t){ return s+(parseFloat(t.priceNoVat)||0); },0);
+    document.getElementById('ticketsSumNoVat').textContent = fmtEUR(sumNoVat);
+    document.getElementById('ticketsHint').textContent = 'Zákazky za ' + (state.month==='all'?'všetky mesiace':monthLabel(state.month));
+
+    bindRow(body,'tickets', function(id,field,val){
+      var patch = {};
+      if(field==='priceNoVat'){ patch.priceNoVat = parseFloat(val)||0; }
+      else { patch[field] = val; }
+      companyDoc('tickets/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  // ---------------- MATERIALS table ----------------
+  function catalogOptionsHtml(selectedKey){
+    var html = '<option value="custom"'+(selectedKey==='custom'?' selected':'')+'>Iná položka…</option>';
+    state.catalog.forEach(function(c){
+      html += '<option value="'+c.id+'"'+(selectedKey===c.id?' selected':'')+'>'+esc(c.name)+' — '+fmtEUR(c.price)+'/ks</option>';
+    });
+    return html;
+  }
+  function renderMaterialsTable(){
+    var rows = filterMonth(state.materials).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('materialsBody');
+    document.getElementById('cnt-materials').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="7">Zatiaľ žiadny materiál'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať položku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(m){
+        return '<tr data-id="'+m.id+'">' +
+          '<td class="date-td"><input type="date" value="'+esc(m.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(m.date))+'</span></td>' +
+          '<td><select data-field="itemKey">'+catalogOptionsHtml(m.itemKey||'custom')+'</select>' +
+            (m.itemKey==='custom' || !m.itemKey ? '<input type="text" value="'+esc(m.itemName||'')+'" data-field="itemName" placeholder="Názov položky" style="margin-top:2px">' : '') +
+          '</td>' +
+          '<td><input type="number" step="1" value="'+(m.qty!=null?m.qty:1)+'" data-field="qty"></td>' +
+          '<td><input type="number" step="0.01" value="'+(m.unitPrice!=null?m.unitPrice:0)+'" data-field="unitPrice"></td>' +
+          '<td class="readonly-price">'+fmtEUR(materialTotal(m))+'</td>' +
+          '<td><input type="text" value="'+esc(m.note||'')+'" data-field="note" placeholder="—"></td>' +
+          '<td><button class="row-del" data-del="materialsUsage"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6M6 6l.6 9.4A1.5 1.5 0 0 0 8.1 17h3.8a1.5 1.5 0 0 0 1.5-1.6L14 6"/></svg></button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sum = rows.reduce(function(s,m){ return s+materialTotal(m); },0);
+    document.getElementById('materialsSum').textContent = fmtEUR(sum);
+
+    bindRow(body,'materialsUsage', function(id,field,val){
+      var patch = {};
+      if(field==='qty'){ patch.qty = parseFloat(val)||0; }
+      else if(field==='unitPrice'){ patch.unitPrice = parseFloat(val)||0; }
+      else if(field==='itemKey'){
+        patch.itemKey = val;
+        if(val!=='custom'){
+          var c = state.catalog.filter(function(x){return x.id===val;})[0];
+          if(c){ patch.unitPrice = c.price; patch.itemName = c.name; }
+        }
+      } else { patch[field]=val; }
+      companyDoc('materialsUsage/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  // ---------------- MILEAGE table ----------------
+  function renderMileageTable(){
+    var rows = filterMonth(state.mileage).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('mileageBody');
+    document.getElementById('cnt-mileage').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Zatiaľ žiadne jazdy'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať jazdu“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(m){
+        var eur = (parseFloat(m.km)||0)*(state.settings.kmRate||0);
+        return '<tr data-id="'+m.id+'">' +
+          '<td class="date-td"><input type="date" value="'+esc(m.date||'')+'" data-field="date"><span class="date-fmt">'+esc(fmtDateSk(m.date))+'</span></td>' +
+          '<td><input type="number" step="1" value="'+(m.km!=null?m.km:0)+'" data-field="km"></td>' +
+          '<td><input type="text" value="'+esc(m.route||'')+'" data-field="route" placeholder="Trasa"></td>' +
+          '<td class="readonly-price">'+fmtEUR(eur)+'</td>' +
+          '<td><button class="row-del" data-del="mileage"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6M6 6l.6 9.4A1.5 1.5 0 0 0 8.1 17h3.8a1.5 1.5 0 0 0 1.5-1.6L14 6"/></svg></button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumKm = rows.reduce(function(s,m){ return s+(parseFloat(m.km)||0); },0);
+    document.getElementById('mileageSumKm').textContent = fmtNum(sumKm)+' km';
+    document.getElementById('mileageSumEur').textContent = fmtEUR(sumKm*(state.settings.kmRate||0));
+
+    bindRow(body,'mileage', function(id,field,val){
+      var patch={};
+      if(field==='km'){ patch.km = parseFloat(val)||0; } else { patch[field]=val; }
+      companyDoc('mileage/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  function bindRow(body, coll, onChange){
+    // ":scope > tr[data-id]" obmedzuje výber len na priame riadky tejto tabuľky (napr. v
+    // zákazkách s materiálom v riadku je pod zákazkou vnorená celá mini-tabuľka materiálu,
+    // ktorej riadky majú tiež vlastné data-id — tie sa viažu samostatne cez wireTicketMaterialInline
+    // a nesmú sa tu duplicitne zachytiť, inak by zmena materiálu omylom prepísala zákazku).
+    body.querySelectorAll(':scope > tr[data-id] [data-field]').forEach(function(el){
+      el.addEventListener('change', function(){
+        var tr = el.closest('tr'); var id = tr.dataset.id;
+        markBusy(1);
+        Promise.resolve(onChange(id, el.dataset.field, el.value)).then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+    body.querySelectorAll(':scope > tr[data-id] [data-del]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var tr = btn.closest('tr'); var id = tr.dataset.id; var coll2 = btn.dataset.del;
+        if(!state.db) return;
+        markBusy(1);
+        companyDoc(coll2+'/'+id).delete().then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+  }
+
+  // ---------------- add buttons ----------------
+  function wireAddButtons(){
+    document.getElementById('addTicketBtn').addEventListener('click', function(){
+      if(!state.db) return;
+      var d = state.month==='all' ? todayISO() : (state.month+'-01');
+      var mode = currentCompany().ticketMode;
+      var base = { date: d, createdAt: Date.now() };
+      var doc;
+      if(mode==='hourly'){
+        doc = Object.assign({}, base, { customer:'', taskType:'', hours:0, priceNoVat:0 });
+      } else if(mode==='manual'){
+        doc = Object.assign({}, base, { machine:'', machineNum:'', priceNoVat:0 });
+      } else if(mode==='simple'){
+        doc = Object.assign({}, base, { name:'', note:'', priceNoVat:0 });
+      } else if(mode==='hours'){
+        doc = Object.assign({}, base, { task:'', hours:0 });
+      } else if(mode==='task'){
+        doc = Object.assign({}, base, { task:'', priceNoVat:0 });
+      } else {
+        doc = Object.assign({}, base, { ticketNum:'', customer:'', priceKey:'custom', serviceLabel:'', priceNoVat:0, filtre:'', note:'' });
+      }
+      companyColl('tickets').add(doc);
+    });
+    document.getElementById('addMaterialBtn').addEventListener('click', function(){
+      if(!state.db) return;
+      var d = state.month==='all' ? todayISO() : (state.month+'-01');
+      companyColl('materialsUsage').add({ date: state.month==='all'?todayISO():d, itemKey:'custom', itemName:'', qty:1, unitPrice:0, note:'', createdAt: Date.now() });
+    });
+    document.getElementById('addMileageBtn').addEventListener('click', function(){
+      if(!state.db) return;
+      var d = state.month==='all' ? todayISO() : (state.month+'-01');
+      companyColl('mileage').add({ date: state.month==='all'?todayISO():d, km:0, route:'', createdAt: Date.now() });
+    });
+  }
+
+  function syncSettingsInputs(){
+    document.getElementById('kmRateInput').value = state.settings.kmRate;
+    document.getElementById('vatRateInput').value = Math.round((state.settings.vatRate||0)*100);
+    document.getElementById('hourlyRateInput').value = state.settings.hourlyRate;
+    document.getElementById('hourlyRateRow').hidden = currentCompany().ticketMode!=='hourly';
+    document.getElementById('servisWeightInput').value = Math.round((state.settings.servisWeight!=null?state.settings.servisWeight:1)*100);
+    document.getElementById('materialWeightInput').value = Math.round((state.settings.materialWeight!=null?state.settings.materialWeight:1)*100);
+    document.getElementById('dopravaWeightInput').value = Math.round((state.settings.dopravaWeight!=null?state.settings.dopravaWeight:1)*100);
+    document.getElementById('showMileageSumInput').checked = state.settings.showMileageSum !== false;
+    document.getElementById('panel-mileage').classList.toggle('hide-mileage-sum', state.settings.showMileageSum===false);
+  }
+  // Uloží jedno pole nastavení danej firmy — update() ak dokument existuje, inak set() so zvyškom aktuálnych hodnôt.
+  function saveSetting(field, value){
+    if(!state.db) return;
+    var patch = {}; patch[field] = value;
+    companyDoc('settings/main').update(patch).catch(function(){
+      companyDoc('settings/main').set(Object.assign({}, state.settings, patch));
+    });
+  }
+  function wireSettings(){
+    document.getElementById('kmRateInput').addEventListener('change', function(e){
+      saveSetting('kmRate', parseFloat(e.target.value)||0);
+    });
+    document.getElementById('vatRateInput').addEventListener('change', function(e){
+      saveSetting('vatRate', (parseFloat(e.target.value)||0)/100);
+    });
+    document.getElementById('hourlyRateInput').addEventListener('change', function(e){
+      saveSetting('hourlyRate', parseFloat(e.target.value)||0);
+    });
+    document.getElementById('servisWeightInput').addEventListener('change', function(e){
+      saveSetting('servisWeight', (parseFloat(e.target.value)||0)/100);
+    });
+    document.getElementById('materialWeightInput').addEventListener('change', function(e){
+      saveSetting('materialWeight', (parseFloat(e.target.value)||0)/100);
+    });
+    document.getElementById('showMileageSumInput').addEventListener('change', function(e){
+      saveSetting('showMileageSum', e.target.checked);
+    });
+    document.getElementById('dopravaWeightInput').addEventListener('change', function(e){
+      saveSetting('dopravaWeight', (parseFloat(e.target.value)||0)/100);
+    });
+  }
+
+  // ---------------- monthly aggregation ----------------
+  function computeAggFor(tickets, materials, mileage, kmRate){
+    var map = {};
+    function ensure(k){ if(!map[k]) map[k]={servis:0,doprava:0,material:0,count:0,km:0}; return map[k]; }
+    tickets.forEach(function(t){ if(!t.date) return; var k=monthKeyOf(t.date); ensure(k).servis += (parseFloat(t.priceNoVat)||0); ensure(k).count += 1; });
+    materials.forEach(function(m){ if(!m.date) return; var k=monthKeyOf(m.date); ensure(k).material += materialTotal(m); });
+    mileage.forEach(function(m){ if(!m.date) return; var k=monthKeyOf(m.date); ensure(k).km += (parseFloat(m.km)||0); });
+    Object.keys(map).forEach(function(k){ map[k].doprava = map[k].km*(kmRate||0); });
+    return map;
+  }
+  function monthlyAgg(){
+    return computeAggFor(state.tickets, state.materials, state.mileage, state.settings.kmRate);
+  }
+  function mergeAgg(target, src){
+    Object.keys(src).forEach(function(k){
+      if(!target[k]) target[k] = {servis:0,doprava:0,material:0,count:0,km:0};
+      target[k].servis += src[k].servis; target[k].doprava += src[k].doprava;
+      target[k].material += src[k].material; target[k].count += src[k].count; target[k].km += src[k].km;
+    });
+    return target;
+  }
+  // Prenásobí peňažné zložky agregácie váhou danej firmy (koľko percent z nej sa počíta
+  // do súhrnu "Všetky firmy") — počet zákaziek sa neváži, to je len počet, nie príjem.
+  function scaleAgg(agg, wServis, wMaterial, wDoprava){
+    var out = {};
+    Object.keys(agg).forEach(function(k){
+      var a = agg[k];
+      out[k] = { servis: a.servis*wServis, material: a.material*wMaterial, doprava: a.doprava*wDoprava, km: a.km*wDoprava, count: a.count };
+    });
+    return out;
+  }
+
+  // ---------------- PREHLAD ----------------
+  function renderPrehlad(){
+    var agg = monthlyAgg();
+    var isAll = state.month==='all';
+    var servisSum, materialSum, kmSum, dopravaSum, count;
+    if(isAll){
+      servisSum = state.tickets.reduce(function(s,t){return s+(parseFloat(t.priceNoVat)||0);},0);
+      materialSum = state.materials.reduce(function(s,m){return s+materialTotal(m);},0);
+      kmSum = state.mileage.reduce(function(s,m){return s+(parseFloat(m.km)||0);},0);
+      count = state.tickets.length;
+    } else {
+      var a = agg[state.month] || {servis:0,material:0,km:0,count:0};
+      servisSum=a.servis; materialSum=a.material; kmSum=a.km; count=a.count;
+    }
+    dopravaSum = kmSum*(state.settings.kmRate||0);
+    var subtotal = servisSum+materialSum+dopravaSum;
+    var vat = subtotal*(state.settings.vatRate||0);
+    var total = subtotal+vat;
+
+    document.getElementById('prehladTitle').textContent = isAll ? 'Fakturácia — všetky mesiace' : 'Fakturácia — '+monthLabel(state.month);
+    document.getElementById('prehladSub').textContent = isAll ? 'Súčet za celú históriu' : 'Servis + doprava + materiál za daný mesiac';
+    document.getElementById('kpiServis').textContent = fmtEUR(servisSum);
+    document.getElementById('kpiDoprava').textContent = fmtEUR(dopravaSum);
+    document.getElementById('kpiMaterial').textContent = fmtEUR(materialSum);
+    document.getElementById('kpiSubtotal').textContent = fmtEUR(subtotal);
+    document.getElementById('kpiTotal').textContent = fmtEUR(total);
+    document.getElementById('kpiCounts').textContent = fmtNum(kmSum)+' km · '+count+' zák.';
+
+    var deltaEl = document.getElementById('kpiDelta');
+    if(!isAll){
+      var prevKey = shiftMonth(state.month,-1);
+      var prev = agg[prevKey];
+      if(prev){
+        var prevSub = prev.servis+prev.material+prev.km*(state.settings.kmRate||0);
+        if(prevSub>0){
+          var pct = ((subtotal-prevSub)/prevSub)*100;
+          deltaEl.textContent = (pct>=0?'▲ +':'▼ ')+fmtNum(Math.abs(pct),0)+'% oproti '+monthShort(prevKey);
+          deltaEl.className = 'delta '+(pct>=0?'up':'down');
+        } else { deltaEl.textContent=''; }
+      } else { deltaEl.textContent=''; }
+    } else { deltaEl.textContent=''; }
+
+    drawRevenueChart(agg);
+    drawCountChart(agg);
+    drawTopCustomers();
+  }
+
+  // ---------------- charts ----------------
+  function lastMonthsKeys(agg, n){
+    var keys = Object.keys(agg).sort();
+    var cur = monthKeyNow();
+    if(keys.indexOf(cur)===-1) keys.push(cur);
+    keys.sort();
+    return keys.slice(Math.max(0, keys.length-n));
+  }
+  function niceMax(v){
+    if(v<=0) return 10;
+    var mag = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v/mag;
+    var step = n<=1?1:n<=2?2:n<=5?5:10;
+    return step*mag;
+  }
+  var tooltipEl;
+  function tt(){ if(!tooltipEl) tooltipEl=document.getElementById('tooltip'); return tooltipEl; }
+  function showTip(x,y,html){ var t=tt(); t.innerHTML=html; t.style.left=x+'px'; t.style.top=(y-10)+'px'; t.classList.add('show'); }
+  function hideTip(){ tt().classList.remove('show'); }
+
+  function roundedTopPath(x,y,w,h,r){
+    if(h<=0) return '';
+    r = Math.min(r, h, w/2);
+    return 'M'+x+','+(y+h)+' L'+x+','+(y+r)+' Q'+x+','+y+' '+(x+r)+','+y+' L'+(x+w-r)+','+y+' Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+' L'+(x+w)+','+(y+h)+' Z';
+  }
+
+  function drawRevenueChart(agg, elId){
+    var el = document.getElementById(elId||'chartRevenue');
+    var keys = lastMonthsKeys(agg,12);
+    var hasData = keys.some(function(k){ var a=agg[k]; return a && (a.servis||a.material||a.km); });
+    if(!hasData){ el.innerHTML = '<div class="chart-empty">Zatiaľ nemáš dosť dát na graf vývoja fakturácie.</div>'; return; }
+
+    var W=640,H=240, padL=52, padR=10, padT=14, padB=28;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var maxTotal = 0;
+    keys.forEach(function(k){ var a=agg[k]||{servis:0,doprava:0,material:0}; maxTotal=Math.max(maxTotal, a.servis+a.doprava+a.material); });
+    var top = niceMax(maxTotal || 10);
+    var barW = Math.min(30, plotW/keys.length*0.55);
+    var slot = plotW/keys.length;
+
+    var gridLines='', gridLabels='';
+    for(var g=0; g<=4; g++){
+      var val = top*g/4;
+      var gy = padT+plotH-(val/top)*plotH;
+      gridLines += '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+gy+'" y2="'+gy+'" stroke="var(--grid)" stroke-width="1"/>';
+      gridLabels += '<text x="'+(padL-8)+'" y="'+(gy+3)+'" text-anchor="end" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+fmtNum(val,0)+'</text>';
+    }
+
+    var bars='', labels='';
+    keys.forEach(function(k,i){
+      var a = agg[k]||{servis:0,doprava:0,material:0};
+      var cx = padL + slot*i + slot/2;
+      var x = cx - barW/2;
+      var yBase = padT+plotH;
+      var segs = [ ['servis',a.servis,'var(--s-servis)'], ['doprava',a.doprava,'var(--s-doprava)'], ['material',a.material,'var(--s-material)'] ];
+      var cum = 0;
+      var lastIdx = -1;
+      for(var s=segs.length-1; s>=0; s--){ if(segs[s][1]>0){ lastIdx=s; break; } }
+      segs.forEach(function(seg,si){
+        var val = seg[1];
+        if(val<=0) return;
+        var segBottomY = yBase - (cum/top)*plotH;
+        cum += val;
+        var segTopY = yBase - (cum/top)*plotH;
+        var insetTop = (si===lastIdx)?0:1;
+        var insetBottom = (si===0)?0:1;
+        var ty = segTopY+insetTop, by = segBottomY-insetBottom;
+        var h = Math.max(0, by-ty);
+        if(si===lastIdx){
+          bars += '<path d="'+roundedTopPath(x,ty,barW,h,4)+'" fill="'+seg[2]+'" data-month="'+k+'"></path>';
+        } else {
+          bars += '<rect x="'+x+'" y="'+ty+'" width="'+barW+'" height="'+h+'" fill="'+seg[2]+'" data-month="'+k+'"></rect>';
+        }
+      });
+      labels += '<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+monthShort(k)+'</text>';
+    });
+
+    el.innerHTML = '<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+
+      gridLines+gridLabels+
+      '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+(padT+plotH)+'" y2="'+(padT+plotH)+'" stroke="var(--axis)" stroke-width="1"/>'+
+      bars+labels+
+    '</svg>';
+
+    el.querySelectorAll('[data-month]').forEach(function(node){
+      node.addEventListener('mousemove', function(ev){
+        var k = node.dataset.month; var a = agg[k]||{servis:0,doprava:0,material:0};
+        var total = a.servis+a.doprava+a.material;
+        showTip(ev.clientX, ev.clientY,
+          '<div class="tt-title">'+monthLabel(k)+'</div>'+
+          '<div class="tt-row"><span><span class="tt-dot" style="background:var(--s-servis)"></span>Servis</span><span>'+fmtEUR(a.servis)+'</span></div>'+
+          '<div class="tt-row"><span><span class="tt-dot" style="background:var(--s-doprava)"></span>Doprava</span><span>'+fmtEUR(a.doprava)+'</span></div>'+
+          '<div class="tt-row"><span><span class="tt-dot" style="background:var(--s-material)"></span>Materiál</span><span>'+fmtEUR(a.material)+'</span></div>'+
+          '<div class="tt-row" style="margin-top:3px;font-weight:600"><span>Spolu</span><span>'+fmtEUR(total)+'</span></div>'
+        );
+      });
+      node.addEventListener('mouseleave', hideTip);
+    });
+  }
+
+  function drawCountChart(agg, elId){
+    var el = document.getElementById(elId||'chartCount');
+    var keys = lastMonthsKeys(agg,12);
+    var hasData = keys.some(function(k){ return agg[k] && agg[k].count; });
+    if(!hasData){ el.innerHTML = '<div class="chart-empty">Zatiaľ žiadne zákazky.</div>'; return; }
+
+    var W=460,H=240, padL=30, padR=10, padT=14, padB=28;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var maxV = 0;
+    keys.forEach(function(k){ maxV = Math.max(maxV, (agg[k]&&agg[k].count)||0); });
+    var top = niceMax(maxV||4);
+    var slot = plotW/keys.length;
+    var barW = Math.min(26, slot*0.55);
+
+    var gridLines='', gridLabels='';
+    for(var g=0; g<=4; g++){
+      var val = top*g/4;
+      var gy = padT+plotH-(val/top)*plotH;
+      gridLines += '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+gy+'" y2="'+gy+'" stroke="var(--grid)" stroke-width="1"/>';
+      gridLabels += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+fmtNum(val,0)+'</text>';
+    }
+    var bars='', labels='';
+    keys.forEach(function(k,i){
+      var v = (agg[k]&&agg[k].count)||0;
+      var cx = padL+slot*i+slot/2, x=cx-barW/2;
+      var h = (v/top)*plotH;
+      var y = padT+plotH-h;
+      if(v>0){ bars += '<path d="'+roundedTopPath(x,y,barW,h,4)+'" fill="var(--accent)" data-month="'+k+'"></path>'; }
+      labels += '<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+monthShort(k)+'</text>';
+    });
+    el.innerHTML = '<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+
+      gridLines+gridLabels+
+      '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+(padT+plotH)+'" y2="'+(padT+plotH)+'" stroke="var(--axis)" stroke-width="1"/>'+
+      bars+labels+
+    '</svg>';
+    el.querySelectorAll('[data-month]').forEach(function(node){
+      node.addEventListener('mousemove', function(ev){
+        var k=node.dataset.month;
+        showTip(ev.clientX, ev.clientY, '<div class="tt-title">'+monthLabel(k)+'</div><div class="tt-row"><span>Zákazky</span><span>'+((agg[k]&&agg[k].count)||0)+'</span></div>');
+      });
+      node.addEventListener('mouseleave', hideTip);
+    });
+  }
+
+  function drawTopCustomers(){
+    var el = document.getElementById('custList');
+    var map = {};
+    state.tickets.forEach(function(t){
+      var name = (t.customer||'').trim();
+      if(!name) return;
+      if(!map[name]) map[name]={name:name, sum:0, count:0};
+      map[name].sum += (parseFloat(t.priceNoVat)||0);
+      map[name].count += 1;
+    });
+    var list = Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return b.sum-a.sum;}).slice(0,6);
+    if(!list.length){ el.innerHTML = '<div class="chart-empty">Zatiaľ žiadni zákazníci.</div>'; return; }
+    var max = list[0].sum || 1;
+    el.innerHTML = list.map(function(c,i){
+      var pct = Math.max(4, Math.round((c.sum/max)*100));
+      return '<div class="cust-row">' +
+        '<div class="cust-rank">'+(i+1)+'</div>' +
+        '<div><div class="cust-name">'+esc(c.name)+'</div><div class="cust-meta">'+c.count+' zákaz'+(c.count===1?'ka':(c.count<5?'ky':'ok'))+'</div></div>' +
+        '<div class="cust-amount">'+fmtEUR(c.sum)+'</div>' +
+        '<div class="cust-bar-track"><div class="cust-bar-fill" style="width:'+pct+'%"></div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ---------------- ALL COMPANIES (súhrnný dashboard) ----------------
+  function renderAllView(){
+    var isAll = state.month==='all';
+    var combinedAgg = {};
+    var perCompany = [];
+    var grand = {servis:0,material:0,km:0,doprava:0,count:0,subtotal:0,total:0};
+
+    Object.keys(state.allData).forEach(function(cid){
+      var d = state.allData[cid];
+      var s = d.settings || {};
+      var kmRate = s.kmRate!=null ? s.kmRate : 0.58;
+      // Len tarifné firmy (Nestlé) reálne počítajú DPH — ostatné doň prispievajú len sumou bez DPH.
+      var vatRate = (d.mode==='tariff') ? (s.vatRate!=null ? s.vatRate : 0.2) : 0;
+      var wServis = s.servisWeight!=null ? s.servisWeight : 1;
+      var wMaterial = s.materialWeight!=null ? s.materialWeight : 1;
+      var wDoprava = s.dopravaWeight!=null ? s.dopravaWeight : 1;
+      var agg = computeAggFor(d.tickets, d.materials, d.mileage, kmRate);
+      mergeAgg(combinedAgg, scaleAgg(agg, wServis, wMaterial, wDoprava));
+
+      var servisSum, materialSum, kmSum, count;
+      if(isAll){
+        servisSum = d.tickets.reduce(function(s2,t){return s2+(parseFloat(t.priceNoVat)||0);},0);
+        materialSum = d.materials.reduce(function(s2,m){return s2+materialTotal(m);},0);
+        kmSum = d.mileage.reduce(function(s2,m){return s2+(parseFloat(m.km)||0);},0);
+        count = d.tickets.length;
+      } else {
+        var a = agg[state.month] || {servis:0,material:0,km:0,count:0};
+        servisSum=a.servis; materialSum=a.material; kmSum=a.km; count=a.count;
+      }
+      var dopravaSum = kmSum*(kmRate||0);
+      // Váhy podľa nastavenia firmy (settings-strip "Koľko z tejto firmy sa počíta do Všetky firmy") —
+      // ovplyvňujú LEN tento súhrnný dashboard, nie vlastný Prehľad danej firmy.
+      var servisW = servisSum*wServis;
+      var materialW = materialSum*wMaterial;
+      var dopravaW = dopravaSum*wDoprava;
+      var kmW = kmSum*wDoprava;
+      var subtotal = servisW+materialW+dopravaW;
+      var total = subtotal*(1+(vatRate||0));
+
+      grand.servis += servisW; grand.material += materialW; grand.km += kmW;
+      grand.doprava += dopravaW; grand.count += count; grand.subtotal += subtotal; grand.total += total;
+
+      perCompany.push({ id:cid, name:d.name||'?', subtotal:subtotal, count:count });
+    });
+
+    document.getElementById('allTitle').textContent = isAll ? 'Celý príjem — všetky mesiace' : 'Celý príjem — '+monthLabel(state.month);
+    document.getElementById('allSub').textContent = isAll ? 'Súčet za celú históriu, všetky firmy dokopy' : 'Servis + doprava + materiál za daný mesiac, všetky firmy dokopy';
+    document.getElementById('allKpiServis').textContent = fmtEUR(grand.servis);
+    document.getElementById('allKpiDoprava').textContent = fmtEUR(grand.doprava);
+    document.getElementById('allKpiMaterial').textContent = fmtEUR(grand.material);
+    document.getElementById('allKpiSubtotal').textContent = fmtEUR(grand.subtotal);
+    document.getElementById('allKpiTotal').textContent = fmtEUR(grand.total);
+    document.getElementById('allKpiCounts').textContent = fmtNum(grand.km)+' km · '+grand.count+' zák.';
+
+    drawRevenueChart(combinedAgg, 'allChartRevenue');
+    drawCountChart(combinedAgg, 'allChartCount');
+
+    perCompany.sort(function(a,b){ return b.subtotal-a.subtotal; });
+    var listEl = document.getElementById('allCompList');
+    document.getElementById('allCompSub').textContent = 'Tržba bez DPH za ' + (isAll?'všetky mesiace':monthLabel(state.month));
+    if(!perCompany.length || perCompany.every(function(c){return c.subtotal<=0;})){
+      listEl.innerHTML = '<div class="chart-empty">Zatiaľ žiadne tržby.</div>';
+    } else {
+      var max = perCompany[0].subtotal || 1;
+      listEl.innerHTML = perCompany.map(function(c,i){
+        var pct = Math.max(4, Math.round((c.subtotal/max)*100));
+        return '<div class="cust-row">' +
+          '<div class="cust-rank">'+(i+1)+'</div>' +
+          '<div><div class="cust-name">'+esc(c.name)+'</div><div class="cust-meta">'+c.count+' zákaz'+(c.count===1?'ka':(c.count<5?'ky':'ok'))+'</div></div>' +
+          '<div class="cust-amount">'+fmtEUR(c.subtotal)+'</div>' +
+          '<div class="cust-bar-track"><div class="cust-bar-fill" style="width:'+pct+'%"></div></div>' +
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // ---------------- KNIHA JÁZD ----------------
+  // Firmy, ktoré vôbec majú záložku Kilometrovné — len tie majú v knihe jázd vlastný stĺpec.
+  function mileageCompanies(){
+    return state.companies.filter(function(c){ return c.showMileage !== false; });
+  }
+  function monthAddOne(key){
+    var p = key.split('-'); var y = parseInt(p[0],10), m = parseInt(p[1],10)+1;
+    if(m>12){ m=1; y++; }
+    return y+'-'+pad(m);
+  }
+  // Vráti zoznam mesiacov OD (fromKey, nezahrnutý] PO toKey [zahrnutý] — teda obdobie medzi
+  // dvoma zápismi tachometra, aj keby medzi nimi Roman preskočil viac mesiacov naraz.
+  // Bez predchádzajúceho zápisu (fromKey===null) sa obdobie nedá určiť — vráti null.
+  function monthsInRange(fromKey, toKey){
+    if(fromKey==null) return null;
+    var out = []; var cur = monthAddOne(fromKey); var guard = 0;
+    while(cur <= toKey && guard < 1000){ out.push(cur); cur = monthAddOne(cur); guard++; }
+    return out;
+  }
+  function renderLogbook(){
+    var companies = mileageCompanies();
+    var head = document.getElementById('logbookHeadRow');
+    head.innerHTML = '<th>Mesiac</th><th>Stav (začiatok)</th><th>Stav (koniec)</th><th>Najazdené</th>' +
+      companies.map(function(c){ return '<th>'+esc(c.name)+'</th>'; }).join('') +
+      '<th>Rozdiel (súkromné)</th><th></th>';
+
+    // Km podľa firmy a mesiaca, predpočítané raz zo state.allData (rovnaké dáta ako "Celý príjem").
+    var kmByCompanyMonth = {};
+    companies.forEach(function(c){
+      var d = state.allData[c.id];
+      var map = {};
+      (d ? d.mileage : []).forEach(function(m){
+        var mk = monthKeyOf(m.date);
+        map[mk] = (map[mk]||0) + (parseFloat(m.km)||0);
+      });
+      kmByCompanyMonth[c.id] = map;
+    });
+
+    var months = Object.keys(state.logbook).sort();
+    var body = document.getElementById('logbookBody');
+    var colCount = 6 + companies.length;
+    if(!months.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="'+colCount+'">Zatiaľ žiadne záznamy. Klikni na „Pridať mesiac“ a zapíš aktuálny stav tachometra — prvý zápis slúži ako počiatočný stav, rozdiel sa ukáže až od druhého.</td></tr>';
+    } else {
+      var prevKey = null;
+      body.innerHTML = months.map(function(mk){
+        var reading = state.logbook[mk];
+        var startVal = prevKey!=null ? (state.logbook[prevKey].odometer||0) : null;
+        var endVal = reading.odometer||0;
+        var range = monthsInRange(prevKey, mk);
+        var diff = (startVal!=null) ? (endVal-startVal) : null;
+        var businessSum = null;
+        var companyCells = companies.map(function(c){
+          if(range==null) return '<td class="readonly-price">–</td>';
+          var sum = range.reduce(function(s,rk){ return s+(kmByCompanyMonth[c.id][rk]||0); },0);
+          return '<td class="readonly-price">'+fmtNum(sum)+'</td>';
+        }).join('');
+        if(range!=null){
+          businessSum = companies.reduce(function(s,c){
+            return s + range.reduce(function(s2,rk){ return s2+(kmByCompanyMonth[c.id][rk]||0); },0);
+          },0);
+        }
+        var rozdiel = (diff!=null) ? (diff-businessSum) : null;
+        var rozdielCls = 'readonly-price'+((rozdiel!=null && rozdiel<0) ? ' logbook-neg' : '');
+        var row = '<tr data-id="'+mk+'">' +
+          '<td>'+esc(monthLabel(mk))+'</td>' +
+          '<td class="readonly-price">'+(startVal!=null? fmtNum(startVal):'–')+'</td>' +
+          '<td><input type="number" step="1" value="'+endVal+'" data-field="odometer"></td>' +
+          '<td class="readonly-price">'+(diff!=null? fmtNum(diff)+' km':'–')+'</td>' +
+          companyCells +
+          '<td class="'+rozdielCls+'">'+(rozdiel!=null? fmtNum(rozdiel)+' km':'–')+'</td>' +
+          '<td><button type="button" class="row-del" data-del-logbook="'+mk+'" title="Zmazať mesiac" aria-label="Zmazať mesiac">'+DEL_ICON+'</button></td>' +
+        '</tr>';
+        prevKey = mk;
+        return row;
+      }).join('');
+    }
+
+    bindRow(body, 'logbook', function(id, field, val){
+      if(field==='odometer'){
+        return state.db.doc('logbook/'+id).update({ odometer: parseFloat(val)||0 });
+      }
+    });
+    body.querySelectorAll('[data-del-logbook]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!state.db) return;
+        var mk = btn.dataset.delLogbook;
+        markBusy(1);
+        state.db.doc('logbook/'+mk).delete().then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+  }
+  function wireLogbookAdd(){
+    document.getElementById('addLogbookBtn').addEventListener('click', function(){
+      if(!state.db) return;
+      var months = Object.keys(state.logbook).sort();
+      var nextKey = months.length ? monthAddOne(months[months.length-1]) : monthKeyNow();
+      var guard = 0;
+      while(state.logbook[nextKey] && guard<1000){ nextKey = monthAddOne(nextKey); guard++; }
+      markBusy(1);
+      state.db.doc('logbook/'+nextKey).set({ odometer: 0, createdAt: Date.now() }).then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+    });
+  }
+
+  // ---------------- glue ----------------
+  function renderAll(){
+    renderMonthOptions();
+    if(state.viewLogbook){ renderLogbook(); return; }
+    if(state.viewAll){ renderAllView(); return; }
+    renderTicketsTable();
+    renderMaterialsTable();
+    renderMileageTable();
+    renderPrehlad();
+  }
+
+  document.getElementById('monthSelect').addEventListener('change', function(e){
+    state.month = e.target.value;
+    renderAll();
+  });
+
+  setupTabs();
+  wireAddButtons();
+  wireSettings();
+  wireLogin();
+  wireAddCompany();
+  wireAllCompaniesBtn();
+  wireLogbookBtn();
+  wireLogbookAdd();
+  syncSettingsInputs();
+  renderMonthOptions();
+  initFirebase();
+})();
+</script>
+</body>
+</html>
