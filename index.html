@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FUSION servis</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='72'%3E%3Ctext y='78'%3E%F0%9F%94%A7%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<!-- Firebase (bezplatný Google účet, nezávislé od Claude) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    color-scheme: light;
+    --bg: #eef0f1;
+    --surface: #ffffff;
+    --surface-2: #f4f6f7;
+    --text: #1b1f22;
+    --text-secondary: #545c62;
+    --text-muted: #8b949b;
+    --border: #dadfe2;
+    --accent: #a8501f;
+    --accent-ink: #ffffff;
+    --accent-soft: #f3e3d6;
+    --danger: #b23a2f;
+    --danger-soft: #f6dfd9;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --s-servis: #2a78d6;
+    --s-doprava: #eb6834;
+    --s-material: #1baf7a;
+    --shadow: 0 1px 2px rgba(20,20,15,0.05), 0 6px 20px -8px rgba(20,20,15,0.12);
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --bg: #14171a;
+      --surface: #1d2124;
+      --surface-2: #22262a;
+      --text: #edeff0;
+      --text-secondary: #b4bcc2;
+      --text-muted: #7c858b;
+      --border: #2a2f33;
+      --accent: #c96b2e;
+      --accent-ink: #14171a;
+      --accent-soft: #3a2a1e;
+      --danger: #d9695a;
+      --danger-soft: #3a2422;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --s-servis: #3987e5;
+      --s-doprava: #d95926;
+      --s-material: #199e70;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 24px -10px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg: #14171a;
+    --surface: #1d2124;
+    --surface-2: #22262a;
+    --text: #edeff0;
+    --text-secondary: #b4bcc2;
+    --text-muted: #7c858b;
+    --border: #2a2f33;
+    --accent: #c96b2e;
+    --accent-ink: #14171a;
+    --accent-soft: #3a2a1e;
+    --danger: #d9695a;
+    --danger-soft: #3a2422;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --s-servis: #3987e5;
+    --s-doprava: #d95926;
+    --s-material: #199e70;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 24px -10px rgba(0,0,0,0.5);
+  }
+
+  *{ box-sizing: border-box; }
+  [hidden]{ display:none !important; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{ font-family: var(--font-display); font-weight: 600; margin:0; text-wrap: balance; }
+  button{ font-family: var(--font-body); }
+  input, select{ font-family: var(--font-mono); }
+
+  .app{ max-width: 1180px; margin: 0 auto; padding: 20px 16px 64px; }
+
+  /* ---------- header ---------- */
+  .topbar{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:10px; background: var(--accent-soft);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .brand-mark svg{ width:20px; height:20px; }
+  .brand h1{ font-size: 21px; letter-spacing: -0.01em; }
+  .brand p{ margin:2px 0 0; font-size:12.5px; color: var(--text-secondary); }
+
+  .status{ display:flex; align-items:center; gap:7px; font-size:12px; color: var(--text-muted); }
+  .status .dot{ width:7px; height:7px; border-radius:50%; background: var(--text-muted); flex-shrink:0; }
+  .status.ok .dot{ background: #1baf7a; }
+  .status.busy .dot{ background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  .status.off .dot{ background: var(--danger); }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  .controls-row{ display:flex; align-items:center; gap:10px; margin-bottom: 16px; flex-wrap:wrap; }
+  select#monthSelect{
+    appearance:none; -webkit-appearance:none;
+    background: var(--surface); color: var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:8px 30px 8px 12px; font-size:13px; font-weight:500;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23545c62'><path d='M5.5 7.5l4.5 5 4.5-5z'/></svg>");
+    background-repeat:no-repeat; background-position: right 8px center; background-size:16px;
+    cursor:pointer;
+  }
+  select#monthSelect:focus{ outline: 2px solid var(--accent); outline-offset:1px; }
+
+  /* ---------- tabs ---------- */
+  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:18px; overflow-x:auto; }
+  .tab-btn{
+    font-family: var(--font-display); font-weight:600; font-size:13.5px;
+    background:none; border:none; color: var(--text-muted); cursor:pointer;
+    padding:9px 14px 11px; border-bottom:2px solid transparent; white-space:nowrap;
+    transition: color .15s;
+  }
+  .tab-btn:hover{ color: var(--text); }
+  .tab-btn.active{ color: var(--text); border-bottom-color: var(--accent); }
+  .tab-btn .count{ color: var(--text-muted); font-family: var(--font-mono); font-weight:500; font-size:12px; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  /* ---------- cards ---------- */
+  .card{
+    background: var(--surface); border:1px solid var(--border); border-radius:12px;
+    box-shadow: var(--shadow);
+  }
+  .card-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); gap:10px; flex-wrap:wrap; }
+  .card-head h2{ font-size:14.5px; }
+  .card-head .sub{ font-size:12px; color: var(--text-muted); margin-top:2px; }
+
+  /* ---------- table ---------- */
+  .table-wrap{ overflow-x:auto; }
+  table.grid{ width:100%; border-collapse:collapse; min-width: 760px; }
+  table.grid th{
+    text-align:left; font-family: var(--font-body); font-weight:600; font-size:11.5px;
+    text-transform:uppercase; letter-spacing:.04em; color: var(--text-muted);
+    background: var(--surface-2); padding:9px 10px; border-bottom:1px solid var(--border);
+    white-space:nowrap; position:sticky; top:0;
+  }
+  table.grid td{ padding:2px 6px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  table.grid tbody tr:hover{ background: var(--surface-2); }
+  table.grid th:first-child, table.grid td:first-child{ position:sticky; left:0; background:var(--surface); z-index:1; }
+  table.grid thead th:first-child{ background:var(--surface-2); z-index:2; }
+  table.grid tbody tr:hover td:first-child{ background: var(--surface-2); }
+
+  table.grid input, table.grid select{
+    width:100%; border:1px solid transparent; background:transparent; color:var(--text);
+    font-size:13px; padding:8px 6px; border-radius:6px; min-width: 90px;
+  }
+  table.grid input[type="date"]{ min-width:126px; }
+  table.grid input[type="number"]{ font-variant-numeric: tabular-nums; text-align:right; min-width:76px; }
+  table.grid select{ min-width: 190px; }
+  table.grid input:hover, table.grid select:hover{ border-color: var(--border); }
+  table.grid input:focus, table.grid select:focus{ outline:none; border-color: var(--accent); background: var(--surface); }
+  table.grid td.num{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; padding-right:12px; color: var(--text-secondary); white-space:nowrap; }
+  table.grid td.readonly-price{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; padding-right:14px; font-weight:500; }
+
+  tfoot td{ padding:10px; font-family: var(--font-mono); font-weight:600; border-top:2px solid var(--border); background: var(--surface-2); }
+  tfoot td.num{ text-align:right; font-variant-numeric: tabular-nums; }
+
+  .row-del{
+    width:28px; height:28px; border-radius:7px; border:1px solid transparent; background:transparent;
+    color: var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .row-del:hover{ background: var(--danger-soft); color: var(--danger); border-color: var(--danger-soft); }
+  .row-del svg{ width:14px; height:14px; }
+
+  .empty-row td{ padding:26px 14px; text-align:center; color: var(--text-muted); font-size:13px; }
+
+  .table-foot{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--border); }
+  .add-btn{
+    display:inline-flex; align-items:center; gap:6px; background: var(--accent-soft); color: var(--accent);
+    border:none; border-radius:8px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .add-btn:hover{ filter:brightness(0.96); }
+  .add-btn svg{ width:14px; height:14px; }
+
+  /* ---------- prehlad: kpi tiles ---------- */
+  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background: var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .kpi{ background: var(--surface); padding:14px 16px; }
+  .kpi .label{ font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color: var(--text-muted); font-weight:600; }
+  .kpi .value{ font-family: var(--font-display); font-size:21px; font-weight:600; margin-top:6px; font-variant-numeric: normal; }
+  .kpi.hero .value{ font-size:26px; color: var(--accent); }
+  .kpi .delta{ font-size:11.5px; margin-top:4px; font-family: var(--font-mono); }
+  .kpi .delta.up{ color:#1a8f4f; } .kpi .delta.down{ color: var(--danger); }
+  :root[data-theme="dark"] .kpi .delta.up, @media (prefers-color-scheme: dark){ .kpi .delta.up{ color:#3fc383; } }
+
+  .settings-strip{ display:flex; gap:18px; align-items:center; padding:10px 16px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .settings-strip label{ font-size:11.5px; color: var(--text-muted); display:flex; align-items:center; gap:6px; }
+  .settings-strip input{ width:64px; border:1px solid var(--border); background: var(--surface-2); color:var(--text); border-radius:6px; padding:5px 7px; font-size:12.5px; font-family: var(--font-mono); }
+
+  .charts-grid{ display:grid; grid-template-columns: 1.4fr 1fr; gap:14px; margin-top:14px; }
+  @media (max-width: 860px){ .charts-grid{ grid-template-columns:1fr; } }
+
+  .legend{ display:flex; gap:14px; padding:0 16px 12px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-secondary); }
+  .legend-dot{ width:9px; height:9px; border-radius:2px; }
+
+  .chart-box{ padding: 4px 10px 8px; }
+  svg.chart{ width:100%; height:auto; overflow:visible; }
+  .chart-empty{ padding:34px 16px; text-align:center; color: var(--text-muted); font-size:13px; }
+
+  .cust-list{ padding:6px 16px 16px; display:flex; flex-direction:column; gap:10px; }
+  .cust-row{ display:grid; grid-template-columns: 22px 1fr auto; gap:10px; align-items:center; }
+  .cust-rank{ font-family: var(--font-mono); color: var(--text-muted); font-size:12px; }
+  .cust-name{ font-size:13px; }
+  .cust-meta{ font-size:11.5px; color: var(--text-muted); margin-top:2px; }
+  .cust-bar-track{ grid-column: 1 / -1; height:6px; border-radius:4px; background: var(--surface-2); overflow:hidden; }
+  .cust-bar-fill{ height:100%; background: var(--accent); border-radius:4px; }
+  .cust-amount{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight:600; font-size:13px; }
+
+  .tooltip{
+    position:fixed; pointer-events:none; background: var(--text); color: var(--bg);
+    font-size:12px; padding:8px 10px; border-radius:8px; box-shadow: var(--shadow);
+    opacity:0; transform: translate(-50%,-100%); transition: opacity .1s; z-index:50; white-space:nowrap;
+  }
+  .tooltip.show{ opacity:1; }
+  .tooltip .tt-title{ font-weight:600; margin-bottom:4px; font-family: var(--font-display); }
+  .tooltip .tt-row{ display:flex; justify-content:space-between; gap:14px; }
+  .tooltip .tt-dot{ display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:5px; }
+
+  .warn-banner{ background: var(--danger-soft); color: var(--danger); border:1px solid var(--danger-soft); border-radius:10px; padding:10px 14px; font-size:12.5px; margin-bottom:14px; display:none; }
+  .warn-banner.show{ display:block; }
+
+  ::selection{ background: var(--accent-soft); }
+
+  /* ---------- login gate ---------- */
+  .login-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-card{
+    width:100%; max-width:340px; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; box-shadow:var(--shadow); padding:26px 24px;
+  }
+  .login-card h1{ font-size:19px; margin-bottom:4px; }
+  .login-card p{ font-size:12.5px; color:var(--text-muted); margin:0 0 18px; }
+  .login-card label{ display:block; font-size:12px; color:var(--text-secondary); margin:12px 0 5px; font-family:var(--font-body); }
+  .login-card input{
+    width:100%; border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+    border-radius:8px; padding:9px 11px; font-size:14px;
+  }
+  .login-card input:focus{ outline:none; border-color:var(--accent); }
+  .login-btn{
+    width:100%; margin-top:18px; background:var(--accent); color:var(--accent-ink); border:none;
+    border-radius:8px; padding:11px; font-size:13.5px; font-weight:600; font-family:var(--font-body); cursor:pointer;
+  }
+  .login-btn:hover{ filter:brightness(0.95); }
+  .login-btn:disabled{ opacity:.6; cursor:default; }
+  .login-error{ color:var(--danger); font-size:12px; margin-top:10px; display:none; }
+  .login-error.show{ display:block; }
+  .login-setup-note{ font-size:11.5px; color:var(--text-muted); margin-top:16px; line-height:1.5; padding-top:14px; border-top:1px solid var(--border); }
+  .signout-btn{ background:none; border:none; color:var(--text-muted); font-size:12px; cursor:pointer; text-decoration:underline; padding:0; }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>FUSION servis</h1>
+    <p>Prihlás sa svojím účtom, aby si videl svoje dáta na všetkých zariadeniach.</p>
+    <form id="loginForm">
+      <label for="loginEmail">E-mail</label>
+      <input type="email" id="loginEmail" autocomplete="username" required>
+      <label for="loginPass">Heslo</label>
+      <input type="password" id="loginPass" autocomplete="current-password" required>
+      <button type="submit" class="login-btn" id="loginBtn">Prihlásiť sa</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+    <div class="login-setup-note">Ešte nemáš prihlásenie? Vytvor si ho v Firebase Console → Authentication → Users → „Add user“ (pozri návod k appke).</div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" hidden>
+  <div class="warn-banner" id="dbWarn">Táto stránka práve nemá spojenie s databázou. Skontroluj internetové pripojenie a skús ju znova otvoriť.</div>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3c0 2-2 2.5-2 5a2 2 0 0 0 4 0c0-2.5-2-3-2-5Z"/>
+          <path d="M13.5 3c0 2-2 2.5-2 5a2 2 0 0 0 4 0c0-2.5-2-3-2-5Z"/>
+          <path d="M4 12h13a3 3 0 0 1 0 6h-1"/>
+          <path d="M4 12v5a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-1"/>
+        </svg>
+      </div>
+      <div>
+        <h1>FUSION servis</h1>
+        <p>Zákazky, materiál a kilometrovné — mesačná fakturácia</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="status" id="statusEl"><span class="dot"></span><span id="statusText">pripája sa…</span></div>
+      <button class="signout-btn" id="signOutBtn">odhlásiť sa</button>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <select id="monthSelect"></select>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tickets">Zákazky <span class="count" id="cnt-tickets"></span></button>
+    <button class="tab-btn" data-tab="materials">Materiál <span class="count" id="cnt-materials"></span></button>
+    <button class="tab-btn" data-tab="mileage">Kilometrovné <span class="count" id="cnt-mileage"></span></button>
+    <button class="tab-btn" data-tab="prehlad">Prehľad</button>
+  </div>
+
+  <main>
+    <section class="panel active" id="panel-tickets">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr>
+              <th>Dátum</th><th>Č. tiketu</th><th>Zákazník</th><th>Typ zákazky</th>
+              <th>Cena bez DPH</th><th>Cena s DPH</th><th>Filtre / hlavy</th><th>Poznámka</th><th></th>
+            </tr></thead>
+            <tbody id="ticketsBody"></tbody>
+            <tfoot><tr>
+              <td colspan="4">Spolu</td>
+              <td class="num" id="ticketsSumNoVat">–</td>
+              <td class="num" id="ticketsSumVat">–</td>
+              <td colspan="3"></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span style="font-size:12px;color:var(--text-muted)" id="ticketsHint">Zoznam zákaziek za vybraný mesiac</span>
+          <button class="add-btn" id="addTicketBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať zákazku</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-materials">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr>
+              <th>Dátum</th><th>Položka</th><th>Počet ks</th><th>Cena/ks</th><th>Spolu bez DPH</th><th>Poznámka</th><th></th>
+            </tr></thead>
+            <tbody id="materialsBody"></tbody>
+            <tfoot><tr>
+              <td colspan="4">Spolu</td>
+              <td class="num" id="materialsSum">–</td>
+              <td colspan="2"></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span style="font-size:12px;color:var(--text-muted)">Použitý materiál za vybraný mesiac</span>
+          <button class="add-btn" id="addMaterialBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať položku</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-mileage">
+      <div class="card">
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr><th>Dátum</th><th>Km</th><th>Trasa</th><th>Suma za dopravu</th><th></th></tr></thead>
+            <tbody id="mileageBody"></tbody>
+            <tfoot><tr>
+              <td>Spolu</td>
+              <td class="num" id="mileageSumKm">–</td>
+              <td></td>
+              <td class="num" id="mileageSumEur">–</td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span style="font-size:12px;color:var(--text-muted)">Jazdy za vybraný mesiac</span>
+          <button class="add-btn" id="addMileageBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Pridať jazdu</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-prehlad">
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-head">
+          <div>
+            <h2 id="prehladTitle">Fakturácia</h2>
+            <div class="sub" id="prehladSub">–</div>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">Servis</div><div class="value" id="kpiServis">–</div></div>
+          <div class="kpi"><div class="label">Doprava</div><div class="value" id="kpiDoprava">–</div></div>
+          <div class="kpi"><div class="label">Materiál</div><div class="value" id="kpiMaterial">–</div></div>
+          <div class="kpi"><div class="label">Spolu bez DPH</div><div class="value" id="kpiSubtotal">–</div><div class="delta" id="kpiDelta"></div></div>
+          <div class="kpi hero"><div class="label">Spolu s DPH</div><div class="value" id="kpiTotal">–</div></div>
+          <div class="kpi"><div class="label">Km / zákazky</div><div class="value" id="kpiCounts" style="font-size:16px">–</div></div>
+        </div>
+        <div class="settings-strip">
+          <label>Sadzba za km <input type="number" step="0.01" id="kmRateInput"> €/km</label>
+          <label>DPH <input type="number" step="1" id="vatRateInput"> %</label>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-head"><div><h2>Fakturácia podľa mesiacov</h2><div class="sub">Servis, doprava a materiál, bez DPH</div></div></div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-servis)"></span>Servis</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-doprava)"></span>Doprava</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--s-material)"></span>Materiál</span>
+          </div>
+          <div class="chart-box" id="chartRevenue"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Počet zákaziek</h2><div class="sub">Podľa mesiacov</div></div></div>
+          <div class="chart-box" id="chartCount"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-head"><div><h2>Najlepší zákazníci</h2><div class="sub">Podľa tržby, všetky obdobia</div></div></div>
+        <div class="cust-list" id="custList"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  // ============================================================
+  // SEM VLOŽ SVOJ FIREBASE CONFIG
+  // (Firebase Console → Project settings → Your apps → Web app → SDK setup)
+  // Presný postup je v priloženom návode NAVOD.md.
+  // ============================================================
+  var firebaseConfig = {
+    apiKey: "TU_VLOZ_API_KEY",
+    authDomain: "TU_VLOZ_AUTH_DOMAIN",
+    projectId: "TU_VLOZ_PROJECT_ID",
+    storageBucket: "TU_VLOZ_STORAGE_BUCKET",
+    messagingSenderId: "TU_VLOZ_SENDER_ID",
+    appId: "TU_VLOZ_APP_ID"
+  };
+</script>
+
+<script>
+(function(){
+  "use strict";
+
+  // Cenník a katalóg materiálu z tvojho augustového excelu — použije sa len raz,
+  // pri prvom spustení appky, na naplnenie databázy (potom si ich vieš upravovať priamo v appke).
+  var DEFAULT_PRICE_LIST = [
+    {id:'oprava-s3-t1', label:'Oprava – Skupina 3 / Tarif 1', price:58},
+    {id:'oprava-s3-t2', label:'Oprava – Skupina 3 / Tarif 2', price:69},
+    {id:'udrzba-s3-t5', label:'Údržba – Skupina 3 / Tarif 5', price:69},
+    {id:'instalacia-s2-t3', label:'Inštalácia – Skupina 2 / Tarif 3', price:109},
+    {id:'instalacia-s3-t3', label:'Inštalácia – Skupina 3 / Tarif 3', price:126},
+    {id:'deinstalacia-s2-t4', label:'Deinštalácia – Skupina 2 / Tarif 4', price:86},
+    {id:'deinstalacia-s3-t4', label:'Deinštalácia – Skupina 3 / Tarif 4', price:109},
+    {id:'hodinovka-s7-t1', label:'Hodinová mzda – Skupina 7 / Tarif 1', price:35}
+  ];
+  var DEFAULT_MATERIALS = [
+    {id:'item-01', name:'Hadica Nápojová 1m', price:1.00},
+    {id:'item-02', name:'Spojka guľový ventil 3/8', price:10.95},
+    {id:'item-03', name:'Spojka roh nástrčná 3/8', price:5.22},
+    {id:'item-04', name:'Spojka rozbočka T 3/8', price:5.22},
+    {id:'item-05', name:'Spojka rozbočka Y 3/8', price:5.48},
+    {id:'item-06', name:'Spojka vnútorný závit 1/2 hadica 3/8', price:6.60},
+    {id:'item-07', name:'Spojka vnútorný závit 3/8 hadica 3/8', price:6.30},
+    {id:'item-08', name:'Spojka vnútorný závit 3/4 hadica 3/8', price:6.30},
+    {id:'item-09', name:'Mosadzná redukcia 3/8 x 3/4', price:3.30},
+    {id:'item-10', name:'Mosadzná redukcia vonkajší závit 3/8 x 3/4', price:3.30},
+    {id:'item-11', name:'Mosadzná vsuvka 3/8 x 3/8', price:2.25},
+    {id:'item-12', name:'FlexiHadica 3/8 na 3/8 30/40cm', price:3.75},
+    {id:'item-13', name:'FlexiHadica 3/8 na 3/8 50/60cm', price:3.75},
+    {id:'item-14', name:'FlexiHadica 3/8 na 3/8 70/80cm', price:4.20},
+    {id:'item-15', name:'FlexiHadica 3/8 na 1/2 90/100cm', price:4.35},
+    {id:'item-16', name:'FlexiHadica 3/8 na 3/8 120/150cm', price:4.95},
+    {id:'item-17', name:'FlexiHadica 3/8 na 3/8 200cm', price:5.25},
+    {id:'item-18', name:'Materiál na zapojenie páky (rozvodná skrinka + 2m káblu)', price:30.00},
+    {id:'item-19', name:'Bandaska', price:15.00},
+    {id:'item-20', name:'Čerpadlo Cometa VIP', price:32.00},
+    {id:'item-21', name:'Čerpadlo Modré', price:25.00}
+  ];
+
+  var MONTHS = ['január','február','marec','apríl','máj','jún','júl','august','september','október','november','december'];
+  var MONTHS_SHORT = ['jan','feb','mar','apr','máj','jún','júl','aug','sep','okt','nov','dec'];
+
+  function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function monthKeyNow(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1); }
+  function monthKeyOf(dateStr){ return (dateStr||'').slice(0,7); }
+  function monthLabel(key){ var p=key.split('-'); var idx=parseInt(p[1],10)-1; return MONTHS[idx]+' '+p[0]; }
+  function monthShort(key){ var p=key.split('-'); var idx=parseInt(p[1],10)-1; return MONTHS_SHORT[idx]+' '+p[0].slice(2); }
+  function shiftMonth(key,delta){ var p=key.split('-'); var y=parseInt(p[0],10), m=parseInt(p[1],10)-1+delta; y+=Math.floor(m/12); m=((m%12)+12)%12; return y+'-'+pad(m+1); }
+  function fmtEUR(n){ return new Intl.NumberFormat('sk-SK',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(n||0); }
+  function fmtNum(n,d){ return new Intl.NumberFormat('sk-SK',{maximumFractionDigits:d==null?0:d}).format(n||0); }
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function lsGet(k,fallback){ try{ var v=localStorage.getItem(k); return v==null?fallback:v; }catch(e){ return fallback; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+  var state = {
+    db: null,
+    tickets: [], materials: [], mileage: [], priceList: [], catalog: [],
+    settings: { kmRate: 0.58, vatRate: 0.2 },
+    activeTab: lsGet('fs_tab','tickets'),
+    month: lsGet('fs_month', monthKeyNow())
+  };
+
+  var pending = 0;
+  function markBusy(delta){
+    pending += delta;
+    var el = document.getElementById('statusEl');
+    var txt = document.getElementById('statusText');
+    if(pending>0){ el.className='status busy'; txt.textContent='ukladá sa…'; }
+    else { el.className='status ok'; txt.textContent='uložené'; }
+  }
+
+  // ---------------- Firebase bootstrap ----------------
+  var auth, firestore;
+
+  function initFirebase(){
+    if(typeof firebase === 'undefined' || !firebaseConfig || firebaseConfig.apiKey.indexOf('TU_VLOZ') === 0){
+      document.getElementById('loginError').textContent = 'Appka ešte nie je nastavená — vlož Firebase config (pozri návod).';
+      document.getElementById('loginError').classList.add('show');
+      return;
+    }
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    firestore = firebase.firestore();
+
+    auth.onAuthStateChanged(function(user){
+      if(user){
+        document.getElementById('loginScreen').hidden = true;
+        document.getElementById('appRoot').hidden = false;
+        initDb();
+      } else {
+        document.getElementById('loginScreen').hidden = false;
+        document.getElementById('appRoot').hidden = true;
+      }
+    });
+  }
+
+  function wireLogin(){
+    document.getElementById('loginForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var email = document.getElementById('loginEmail').value.trim();
+      var pass = document.getElementById('loginPass').value;
+      var btn = document.getElementById('loginBtn');
+      var err = document.getElementById('loginError');
+      err.classList.remove('show');
+      btn.disabled = true; btn.textContent = 'Prihlasujem…';
+      auth.signInWithEmailAndPassword(email, pass).catch(function(e2){
+        err.textContent = e2.code === 'auth/invalid-credential' || e2.code === 'auth/wrong-password' || e2.code==='auth/user-not-found'
+          ? 'Nesprávny e-mail alebo heslo.' : ('Prihlásenie zlyhalo: ' + e2.message);
+        err.classList.add('show');
+      }).finally(function(){ btn.disabled=false; btn.textContent='Prihlásiť sa'; });
+    });
+    document.getElementById('signOutBtn').addEventListener('click', function(){
+      if(auth) auth.signOut();
+    });
+  }
+
+  // ---------------- DB bootstrap ----------------
+  function initDb(){
+      var db = firestore;
+      state.db = db;
+      document.getElementById('statusEl').className='status ok';
+      document.getElementById('statusText').textContent='pripojené';
+
+      db.collection('tickets').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+        state.tickets = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        renderAll();
+      }, function(){ });
+
+      db.collection('materialsUsage').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+        state.materials = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        renderAll();
+      }, function(){ });
+
+      db.collection('mileage').orderBy('date','asc').limit(1000).onSnapshot(function(snap){
+        state.mileage = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+        renderAll();
+      }, function(){ });
+
+      db.collection('priceList').onSnapshot(function(snap){
+        state.priceList = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }).sort(function(a,b){ return (a.price||0)-(b.price||0); });
+        renderTicketsTable();
+      }, function(){ });
+
+      db.collection('materialsCatalog').onSnapshot(function(snap){
+        state.catalog = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }).sort(function(a,b){ return a.name<b.name?-1:1; });
+        renderMaterialsTable();
+      }, function(){ });
+
+      db.doc('settings/main').onSnapshot(function(snap){
+        if(snap.exists){ state.settings = Object.assign({kmRate:0.58,vatRate:0.2}, snap.data()); }
+        renderPrehlad();
+        syncSettingsInputs();
+      }, function(){ showDbWarn(); });
+
+      seedDefaultsIfEmpty(db);
+  }
+  function showDbWarn(){
+    document.getElementById('dbWarn').classList.add('show');
+    document.getElementById('statusEl').className='status off';
+    document.getElementById('statusText').textContent='bez pripojenia';
+  }
+
+  // Prvé spustenie: ak je cenník/katalóg/nastavenia prázdne, naplní ich hodnotami z augustového excelu.
+  function seedDefaultsIfEmpty(db){
+    db.collection('priceList').limit(1).get().then(function(snap){
+      if(snap.empty){
+        var batch = db.batch();
+        DEFAULT_PRICE_LIST.forEach(function(p){ batch.set(db.collection('priceList').doc(p.id), {label:p.label, price:p.price}); });
+        batch.commit();
+      }
+    });
+    db.collection('materialsCatalog').limit(1).get().then(function(snap){
+      if(snap.empty){
+        var batch = db.batch();
+        DEFAULT_MATERIALS.forEach(function(m){ batch.set(db.collection('materialsCatalog').doc(m.id), {name:m.name, price:m.price}); });
+        batch.commit();
+      }
+    });
+    db.doc('settings/main').get().then(function(snap){
+      if(!snap.exists){ db.doc('settings/main').set({kmRate:0.58, vatRate:0.2}); }
+    });
+  }
+
+  // ---------------- tabs & month ----------------
+  function setupTabs(){
+    var btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        state.activeTab = b.dataset.tab; lsSet('fs_tab', state.activeTab);
+        btns.forEach(function(x){ x.classList.toggle('active', x===b); });
+        document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id==='panel-'+state.activeTab); });
+        if(state.activeTab==='prehlad'){ renderPrehlad(); }
+      });
+      b.classList.toggle('active', b.dataset.tab===state.activeTab);
+    });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id==='panel-'+state.activeTab); });
+  }
+
+  function allMonthKeys(){
+    var set = {};
+    state.tickets.concat(state.materials).concat(state.mileage).forEach(function(r){ if(r.date) set[monthKeyOf(r.date)]=true; });
+    set[monthKeyNow()] = true;
+    return Object.keys(set).sort().reverse();
+  }
+  function renderMonthOptions(){
+    var sel = document.getElementById('monthSelect');
+    var keys = allMonthKeys();
+    if(keys.indexOf(state.month)===-1 && state.month!=='all') keys.unshift(state.month);
+    var html = '<option value="all">Všetky mesiace</option>';
+    keys.forEach(function(k){ html += '<option value="'+k+'"'+(k===state.month?' selected':'')+'>'+monthLabel(k)+'</option>'; });
+    sel.innerHTML = html;
+    sel.value = state.month;
+  }
+
+  // ---------------- helpers on data ----------------
+  function filterMonth(arr){
+    if(state.month==='all') return arr;
+    return arr.filter(function(r){ return monthKeyOf(r.date)===state.month; });
+  }
+  function materialTotal(m){ return (parseFloat(m.qty)||0) * (parseFloat(m.unitPrice)||0); }
+
+  // ---------------- TICKETS table ----------------
+  function priceListOptionsHtml(selectedKey){
+    var html = '<option value="custom"'+(selectedKey==='custom'?' selected':'')+'>Vlastná cena…</option>';
+    state.priceList.forEach(function(p){
+      html += '<option value="'+p.id+'"'+(selectedKey===p.id?' selected':'')+'>'+esc(p.label)+' — '+fmtEUR(p.price)+'</option>';
+    });
+    return html;
+  }
+  function renderTicketsTable(){
+    var rows = filterMonth(state.tickets).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('ticketsBody');
+    document.getElementById('cnt-tickets').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="9">Zatiaľ žiadne zákazky'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať zákazku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(t){
+        var priceVat = (parseFloat(t.priceNoVat)||0) * (1+(state.settings.vatRate||0));
+        return '<tr data-id="'+t.id+'">' +
+          '<td><input type="date" value="'+esc(t.date||'')+'" data-field="date"></td>' +
+          '<td><input type="text" value="'+esc(t.ticketNum||'')+'" data-field="ticketNum" placeholder="—"></td>' +
+          '<td><input type="text" value="'+esc(t.customer||'')+'" data-field="customer" placeholder="Zákazník"></td>' +
+          '<td><select data-field="priceKey">'+priceListOptionsHtml(t.priceKey||'custom')+'</select>' +
+            (t.priceKey==='custom' || !t.priceKey ? '<input type="text" value="'+esc(t.serviceLabel||'')+'" data-field="serviceLabel" placeholder="Popis zákazky" style="margin-top:2px">' : '') +
+          '</td>' +
+          '<td><input type="number" step="0.01" value="'+(t.priceNoVat!=null?t.priceNoVat:0)+'" data-field="priceNoVat"></td>' +
+          '<td class="readonly-price">'+fmtEUR(priceVat)+'</td>' +
+          '<td><input type="text" value="'+esc(t.filtre||'')+'" data-field="filtre" placeholder="—"></td>' +
+          '<td><input type="text" value="'+esc(t.note||'')+'" data-field="note" placeholder="—"></td>' +
+          '<td><button class="row-del" data-del="tickets"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6M6 6l.6 9.4A1.5 1.5 0 0 0 8.1 17h3.8a1.5 1.5 0 0 0 1.5-1.6L14 6"/></svg></button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumNoVat = rows.reduce(function(s,t){ return s+(parseFloat(t.priceNoVat)||0); },0);
+    var sumVat = sumNoVat*(1+(state.settings.vatRate||0));
+    document.getElementById('ticketsSumNoVat').textContent = fmtEUR(sumNoVat);
+    document.getElementById('ticketsSumVat').textContent = fmtEUR(sumVat);
+    document.getElementById('ticketsHint').textContent = 'Zákazky za ' + (state.month==='all'?'všetky mesiace':monthLabel(state.month));
+
+    bindRow(body,'tickets', function(id,field,val){
+      var patch = {};
+      if(field==='priceNoVat'){ patch.priceNoVat = parseFloat(val)||0; }
+      else if(field==='priceKey'){
+        patch.priceKey = val;
+        if(val!=='custom'){
+          var pl = state.priceList.filter(function(p){return p.id===val;})[0];
+          if(pl){ patch.priceNoVat = pl.price; patch.serviceLabel = pl.label; }
+        }
+      } else { patch[field] = val; }
+      state.db.doc('tickets/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  // ---------------- MATERIALS table ----------------
+  function catalogOptionsHtml(selectedKey){
+    var html = '<option value="custom"'+(selectedKey==='custom'?' selected':'')+'>Iná položka…</option>';
+    state.catalog.forEach(function(c){
+      html += '<option value="'+c.id+'"'+(selectedKey===c.id?' selected':'')+'>'+esc(c.name)+' — '+fmtEUR(c.price)+'/ks</option>';
+    });
+    return html;
+  }
+  function renderMaterialsTable(){
+    var rows = filterMonth(state.materials).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('materialsBody');
+    document.getElementById('cnt-materials').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="7">Zatiaľ žiadny materiál'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať položku“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(m){
+        return '<tr data-id="'+m.id+'">' +
+          '<td><input type="date" value="'+esc(m.date||'')+'" data-field="date"></td>' +
+          '<td><select data-field="itemKey">'+catalogOptionsHtml(m.itemKey||'custom')+'</select>' +
+            (m.itemKey==='custom' || !m.itemKey ? '<input type="text" value="'+esc(m.itemName||'')+'" data-field="itemName" placeholder="Názov položky" style="margin-top:2px">' : '') +
+          '</td>' +
+          '<td><input type="number" step="1" value="'+(m.qty!=null?m.qty:1)+'" data-field="qty"></td>' +
+          '<td><input type="number" step="0.01" value="'+(m.unitPrice!=null?m.unitPrice:0)+'" data-field="unitPrice"></td>' +
+          '<td class="readonly-price">'+fmtEUR(materialTotal(m))+'</td>' +
+          '<td><input type="text" value="'+esc(m.note||'')+'" data-field="note" placeholder="—"></td>' +
+          '<td><button class="row-del" data-del="materialsUsage"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6M6 6l.6 9.4A1.5 1.5 0 0 0 8.1 17h3.8a1.5 1.5 0 0 0 1.5-1.6L14 6"/></svg></button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sum = rows.reduce(function(s,m){ return s+materialTotal(m); },0);
+    document.getElementById('materialsSum').textContent = fmtEUR(sum);
+
+    bindRow(body,'materialsUsage', function(id,field,val){
+      var patch = {};
+      if(field==='qty'){ patch.qty = parseFloat(val)||0; }
+      else if(field==='unitPrice'){ patch.unitPrice = parseFloat(val)||0; }
+      else if(field==='itemKey'){
+        patch.itemKey = val;
+        if(val!=='custom'){
+          var c = state.catalog.filter(function(x){return x.id===val;})[0];
+          if(c){ patch.unitPrice = c.price; patch.itemName = c.name; }
+        }
+      } else { patch[field]=val; }
+      state.db.doc('materialsUsage/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  // ---------------- MILEAGE table ----------------
+  function renderMileageTable(){
+    var rows = filterMonth(state.mileage).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var body = document.getElementById('mileageBody');
+    document.getElementById('cnt-mileage').textContent = rows.length ? rows.length : '';
+    if(!rows.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Zatiaľ žiadne jazdy'+(state.month==='all'?'':' v '+monthLabel(state.month))+'. Klikni na „Pridať jazdu“.</td></tr>';
+    } else {
+      body.innerHTML = rows.map(function(m){
+        var eur = (parseFloat(m.km)||0)*(state.settings.kmRate||0);
+        return '<tr data-id="'+m.id+'">' +
+          '<td><input type="date" value="'+esc(m.date||'')+'" data-field="date"></td>' +
+          '<td><input type="number" step="1" value="'+(m.km!=null?m.km:0)+'" data-field="km"></td>' +
+          '<td><input type="text" value="'+esc(m.route||'')+'" data-field="route" placeholder="Trasa"></td>' +
+          '<td class="readonly-price">'+fmtEUR(eur)+'</td>' +
+          '<td><button class="row-del" data-del="mileage"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6M6 6l.6 9.4A1.5 1.5 0 0 0 8.1 17h3.8a1.5 1.5 0 0 0 1.5-1.6L14 6"/></svg></button></td>' +
+        '</tr>';
+      }).join('');
+    }
+    var sumKm = rows.reduce(function(s,m){ return s+(parseFloat(m.km)||0); },0);
+    document.getElementById('mileageSumKm').textContent = fmtNum(sumKm)+' km';
+    document.getElementById('mileageSumEur').textContent = fmtEUR(sumKm*(state.settings.kmRate||0));
+
+    bindRow(body,'mileage', function(id,field,val){
+      var patch={};
+      if(field==='km'){ patch.km = parseFloat(val)||0; } else { patch[field]=val; }
+      state.db.doc('mileage/'+id).update(patch).catch(function(){});
+    });
+  }
+
+  function bindRow(body, coll, onChange){
+    body.querySelectorAll('[data-field]').forEach(function(el){
+      el.addEventListener('change', function(){
+        var tr = el.closest('tr'); var id = tr.dataset.id;
+        markBusy(1);
+        Promise.resolve(onChange(id, el.dataset.field, el.value)).then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+    body.querySelectorAll('[data-del]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var tr = btn.closest('tr'); var id = tr.dataset.id; var coll2 = btn.dataset.del;
+        if(!state.db) return;
+        markBusy(1);
+        state.db.doc(coll2+'/'+id).delete().then(function(){ markBusy(-1); }).catch(function(){ markBusy(-1); });
+      });
+    });
+  }
+
+  // ---------------- add buttons ----------------
+  function wireAddButtons(){
+    document.getElementById('addTicketBtn').addEventListener('click', function(){
+      if(!state.db) return;
+      var d = state.month==='all' ? todayISO() : (state.month+'-01');
+      state.db.collection('tickets').add({ date: state.month==='all'?todayISO():d, ticketNum:'', customer:'', priceKey:'custom', serviceLabel:'', priceNoVat:0, filtre:'', note:'', createdAt: Date.now() });
+    });
+    document.getElementById('addMaterialBtn').addEventListener('click', function(){
+      if(!state.db) return;
+      var d = state.month==='all' ? todayISO() : (state.month+'-01');
+      state.db.collection('materialsUsage').add({ date: state.month==='all'?todayISO():d, itemKey:'custom', itemName:'', qty:1, unitPrice:0, note:'', createdAt: Date.now() });
+    });
+    document.getElementById('addMileageBtn').addEventListener('click', function(){
+      if(!state.db) return;
+      var d = state.month==='all' ? todayISO() : (state.month+'-01');
+      state.db.collection('mileage').add({ date: state.month==='all'?todayISO():d, km:0, route:'', createdAt: Date.now() });
+    });
+  }
+
+  function syncSettingsInputs(){
+    document.getElementById('kmRateInput').value = state.settings.kmRate;
+    document.getElementById('vatRateInput').value = Math.round((state.settings.vatRate||0)*100);
+  }
+  function wireSettings(){
+    document.getElementById('kmRateInput').addEventListener('change', function(e){
+      if(!state.db) return;
+      var v = parseFloat(e.target.value)||0;
+      state.db.doc('settings/main').update({kmRate:v}).catch(function(){ state.db.doc('settings/main').set({kmRate:v, vatRate: state.settings.vatRate}); });
+    });
+    document.getElementById('vatRateInput').addEventListener('change', function(e){
+      if(!state.db) return;
+      var v = (parseFloat(e.target.value)||0)/100;
+      state.db.doc('settings/main').update({vatRate:v}).catch(function(){ state.db.doc('settings/main').set({vatRate:v, kmRate: state.settings.kmRate}); });
+    });
+  }
+
+  // ---------------- monthly aggregation ----------------
+  function monthlyAgg(){
+    var map = {};
+    function ensure(k){ if(!map[k]) map[k]={servis:0,doprava:0,material:0,count:0,km:0}; return map[k]; }
+    state.tickets.forEach(function(t){ if(!t.date) return; var k=monthKeyOf(t.date); ensure(k).servis += (parseFloat(t.priceNoVat)||0); ensure(k).count += 1; });
+    state.materials.forEach(function(m){ if(!m.date) return; var k=monthKeyOf(m.date); ensure(k).material += materialTotal(m); });
+    state.mileage.forEach(function(m){ if(!m.date) return; var k=monthKeyOf(m.date); ensure(k).km += (parseFloat(m.km)||0); });
+    Object.keys(map).forEach(function(k){ map[k].doprava = map[k].km*(state.settings.kmRate||0); });
+    return map;
+  }
+
+  // ---------------- PREHLAD ----------------
+  function renderPrehlad(){
+    var agg = monthlyAgg();
+    var isAll = state.month==='all';
+    var servisSum, materialSum, kmSum, dopravaSum, count;
+    if(isAll){
+      servisSum = state.tickets.reduce(function(s,t){return s+(parseFloat(t.priceNoVat)||0);},0);
+      materialSum = state.materials.reduce(function(s,m){return s+materialTotal(m);},0);
+      kmSum = state.mileage.reduce(function(s,m){return s+(parseFloat(m.km)||0);},0);
+      count = state.tickets.length;
+    } else {
+      var a = agg[state.month] || {servis:0,material:0,km:0,count:0};
+      servisSum=a.servis; materialSum=a.material; kmSum=a.km; count=a.count;
+    }
+    dopravaSum = kmSum*(state.settings.kmRate||0);
+    var subtotal = servisSum+materialSum+dopravaSum;
+    var vat = subtotal*(state.settings.vatRate||0);
+    var total = subtotal+vat;
+
+    document.getElementById('prehladTitle').textContent = isAll ? 'Fakturácia — všetky mesiace' : 'Fakturácia — '+monthLabel(state.month);
+    document.getElementById('prehladSub').textContent = isAll ? 'Súčet za celú históriu' : 'Servis + doprava + materiál za daný mesiac';
+    document.getElementById('kpiServis').textContent = fmtEUR(servisSum);
+    document.getElementById('kpiDoprava').textContent = fmtEUR(dopravaSum);
+    document.getElementById('kpiMaterial').textContent = fmtEUR(materialSum);
+    document.getElementById('kpiSubtotal').textContent = fmtEUR(subtotal);
+    document.getElementById('kpiTotal').textContent = fmtEUR(total);
+    document.getElementById('kpiCounts').textContent = fmtNum(kmSum)+' km · '+count+' zák.';
+
+    var deltaEl = document.getElementById('kpiDelta');
+    if(!isAll){
+      var prevKey = shiftMonth(state.month,-1);
+      var prev = agg[prevKey];
+      if(prev){
+        var prevSub = prev.servis+prev.material+prev.km*(state.settings.kmRate||0);
+        if(prevSub>0){
+          var pct = ((subtotal-prevSub)/prevSub)*100;
+          deltaEl.textContent = (pct>=0?'▲ +':'▼ ')+fmtNum(Math.abs(pct),0)+'% oproti '+monthShort(prevKey);
+          deltaEl.className = 'delta '+(pct>=0?'up':'down');
+        } else { deltaEl.textContent=''; }
+      } else { deltaEl.textContent=''; }
+    } else { deltaEl.textContent=''; }
+
+    drawRevenueChart(agg);
+    drawCountChart(agg);
+    drawTopCustomers();
+  }
+
+  // ---------------- charts ----------------
+  function lastMonthsKeys(agg, n){
+    var keys = Object.keys(agg).sort();
+    var cur = monthKeyNow();
+    if(keys.indexOf(cur)===-1) keys.push(cur);
+    keys.sort();
+    return keys.slice(Math.max(0, keys.length-n));
+  }
+  function niceMax(v){
+    if(v<=0) return 10;
+    var mag = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v/mag;
+    var step = n<=1?1:n<=2?2:n<=5?5:10;
+    return step*mag;
+  }
+  var tooltipEl;
+  function tt(){ if(!tooltipEl) tooltipEl=document.getElementById('tooltip'); return tooltipEl; }
+  function showTip(x,y,html){ var t=tt(); t.innerHTML=html; t.style.left=x+'px'; t.style.top=(y-10)+'px'; t.classList.add('show'); }
+  function hideTip(){ tt().classList.remove('show'); }
+
+  function roundedTopPath(x,y,w,h,r){
+    if(h<=0) return '';
+    r = Math.min(r, h, w/2);
+    return 'M'+x+','+(y+h)+' L'+x+','+(y+r)+' Q'+x+','+y+' '+(x+r)+','+y+' L'+(x+w-r)+','+y+' Q'+(x+w)+','+y+' '+(x+w)+','+(y+r)+' L'+(x+w)+','+(y+h)+' Z';
+  }
+
+  function drawRevenueChart(agg){
+    var el = document.getElementById('chartRevenue');
+    var keys = lastMonthsKeys(agg,12);
+    var hasData = keys.some(function(k){ var a=agg[k]; return a && (a.servis||a.material||a.km); });
+    if(!hasData){ el.innerHTML = '<div class="chart-empty">Zatiaľ nemáš dosť dát na graf vývoja fakturácie.</div>'; return; }
+
+    var W=640,H=240, padL=52, padR=10, padT=14, padB=28;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var maxTotal = 0;
+    keys.forEach(function(k){ var a=agg[k]||{servis:0,doprava:0,material:0}; maxTotal=Math.max(maxTotal, a.servis+a.doprava+a.material); });
+    var top = niceMax(maxTotal || 10);
+    var barW = Math.min(30, plotW/keys.length*0.55);
+    var slot = plotW/keys.length;
+
+    var gridLines='', gridLabels='';
+    for(var g=0; g<=4; g++){
+      var val = top*g/4;
+      var gy = padT+plotH-(val/top)*plotH;
+      gridLines += '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+gy+'" y2="'+gy+'" stroke="var(--grid)" stroke-width="1"/>';
+      gridLabels += '<text x="'+(padL-8)+'" y="'+(gy+3)+'" text-anchor="end" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+fmtNum(val,0)+'</text>';
+    }
+
+    var bars='', labels='';
+    keys.forEach(function(k,i){
+      var a = agg[k]||{servis:0,doprava:0,material:0};
+      var cx = padL + slot*i + slot/2;
+      var x = cx - barW/2;
+      var yBase = padT+plotH;
+      var segs = [ ['servis',a.servis,'var(--s-servis)'], ['doprava',a.doprava,'var(--s-doprava)'], ['material',a.material,'var(--s-material)'] ];
+      var cum = 0;
+      var lastIdx = -1;
+      for(var s=segs.length-1; s>=0; s--){ if(segs[s][1]>0){ lastIdx=s; break; } }
+      segs.forEach(function(seg,si){
+        var val = seg[1];
+        if(val<=0) return;
+        var segBottomY = yBase - (cum/top)*plotH;
+        cum += val;
+        var segTopY = yBase - (cum/top)*plotH;
+        var insetTop = (si===lastIdx)?0:1;
+        var insetBottom = (si===0)?0:1;
+        var ty = segTopY+insetTop, by = segBottomY-insetBottom;
+        var h = Math.max(0, by-ty);
+        if(si===lastIdx){
+          bars += '<path d="'+roundedTopPath(x,ty,barW,h,4)+'" fill="'+seg[2]+'" data-month="'+k+'"></path>';
+        } else {
+          bars += '<rect x="'+x+'" y="'+ty+'" width="'+barW+'" height="'+h+'" fill="'+seg[2]+'" data-month="'+k+'"></rect>';
+        }
+      });
+      labels += '<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+monthShort(k)+'</text>';
+    });
+
+    el.innerHTML = '<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+
+      gridLines+gridLabels+
+      '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+(padT+plotH)+'" y2="'+(padT+plotH)+'" stroke="var(--axis)" stroke-width="1"/>'+
+      bars+labels+
+    '</svg>';
+
+    el.querySelectorAll('[data-month]').forEach(function(node){
+      node.addEventListener('mousemove', function(ev){
+        var k = node.dataset.month; var a = agg[k]||{servis:0,doprava:0,material:0};
+        var total = a.servis+a.doprava+a.material;
+        showTip(ev.clientX, ev.clientY,
+          '<div class="tt-title">'+monthLabel(k)+'</div>'+
+          '<div class="tt-row"><span><span class="tt-dot" style="background:var(--s-servis)"></span>Servis</span><span>'+fmtEUR(a.servis)+'</span></div>'+
+          '<div class="tt-row"><span><span class="tt-dot" style="background:var(--s-doprava)"></span>Doprava</span><span>'+fmtEUR(a.doprava)+'</span></div>'+
+          '<div class="tt-row"><span><span class="tt-dot" style="background:var(--s-material)"></span>Materiál</span><span>'+fmtEUR(a.material)+'</span></div>'+
+          '<div class="tt-row" style="margin-top:3px;font-weight:600"><span>Spolu</span><span>'+fmtEUR(total)+'</span></div>'
+        );
+      });
+      node.addEventListener('mouseleave', hideTip);
+    });
+  }
+
+  function drawCountChart(agg){
+    var el = document.getElementById('chartCount');
+    var keys = lastMonthsKeys(agg,12);
+    var hasData = keys.some(function(k){ return agg[k] && agg[k].count; });
+    if(!hasData){ el.innerHTML = '<div class="chart-empty">Zatiaľ žiadne zákazky.</div>'; return; }
+
+    var W=460,H=240, padL=30, padR=10, padT=14, padB=28;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var maxV = 0;
+    keys.forEach(function(k){ maxV = Math.max(maxV, (agg[k]&&agg[k].count)||0); });
+    var top = niceMax(maxV||4);
+    var slot = plotW/keys.length;
+    var barW = Math.min(26, slot*0.55);
+
+    var gridLines='', gridLabels='';
+    for(var g=0; g<=4; g++){
+      var val = top*g/4;
+      var gy = padT+plotH-(val/top)*plotH;
+      gridLines += '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+gy+'" y2="'+gy+'" stroke="var(--grid)" stroke-width="1"/>';
+      gridLabels += '<text x="'+(padL-6)+'" y="'+(gy+3)+'" text-anchor="end" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+fmtNum(val,0)+'</text>';
+    }
+    var bars='', labels='';
+    keys.forEach(function(k,i){
+      var v = (agg[k]&&agg[k].count)||0;
+      var cx = padL+slot*i+slot/2, x=cx-barW/2;
+      var h = (v/top)*plotH;
+      var y = padT+plotH-h;
+      if(v>0){ bars += '<path d="'+roundedTopPath(x,y,barW,h,4)+'" fill="var(--accent)" data-month="'+k+'"></path>'; }
+      labels += '<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="var(--font-mono)">'+monthShort(k)+'</text>';
+    });
+    el.innerHTML = '<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'+
+      gridLines+gridLabels+
+      '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+(padT+plotH)+'" y2="'+(padT+plotH)+'" stroke="var(--axis)" stroke-width="1"/>'+
+      bars+labels+
+    '</svg>';
+    el.querySelectorAll('[data-month]').forEach(function(node){
+      node.addEventListener('mousemove', function(ev){
+        var k=node.dataset.month;
+        showTip(ev.clientX, ev.clientY, '<div class="tt-title">'+monthLabel(k)+'</div><div class="tt-row"><span>Zákazky</span><span>'+((agg[k]&&agg[k].count)||0)+'</span></div>');
+      });
+      node.addEventListener('mouseleave', hideTip);
+    });
+  }
+
+  function drawTopCustomers(){
+    var el = document.getElementById('custList');
+    var map = {};
+    state.tickets.forEach(function(t){
+      var name = (t.customer||'').trim();
+      if(!name) return;
+      if(!map[name]) map[name]={name:name, sum:0, count:0};
+      map[name].sum += (parseFloat(t.priceNoVat)||0);
+      map[name].count += 1;
+    });
+    var list = Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return b.sum-a.sum;}).slice(0,6);
+    if(!list.length){ el.innerHTML = '<div class="chart-empty">Zatiaľ žiadni zákazníci.</div>'; return; }
+    var max = list[0].sum || 1;
+    el.innerHTML = list.map(function(c,i){
+      var pct = Math.max(4, Math.round((c.sum/max)*100));
+      return '<div class="cust-row">' +
+        '<div class="cust-rank">'+(i+1)+'</div>' +
+        '<div><div class="cust-name">'+esc(c.name)+'</div><div class="cust-meta">'+c.count+' zákaz'+(c.count===1?'ka':(c.count<5?'ky':'ok'))+'</div></div>' +
+        '<div class="cust-amount">'+fmtEUR(c.sum)+'</div>' +
+        '<div class="cust-bar-track"><div class="cust-bar-fill" style="width:'+pct+'%"></div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ---------------- glue ----------------
+  function renderAll(){
+    renderMonthOptions();
+    renderTicketsTable();
+    renderMaterialsTable();
+    renderMileageTable();
+    renderPrehlad();
+  }
+
+  document.getElementById('monthSelect').addEventListener('change', function(e){
+    state.month = e.target.value; lsSet('fs_month', state.month);
+    renderAll();
+  });
+
+  setupTabs();
+  wireAddButtons();
+  wireSettings();
+  wireLogin();
+  syncSettingsInputs();
+  renderMonthOptions();
+  initFirebase();
+})();
+</script>
+</body>
+</html>
